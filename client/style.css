@@ -1,0 +1,49 @@
+body {
+  overflow: hidden;
+  margin: 0;
+  font-size: 14px;
+  font-family: "Helvetica Neue", Helvetica;
+}
+
+.node circle {
+  cursor: pointer;
+  fill: #fff;
+  stroke-width: 1.5px;
+}
+
+path.link {
+  fill: none;
+  stroke: #ccc;
+}
+
+.main 
+{
+    padding: 20px;
+}
+
+.error 
+{
+    color:red;
+    display:none;
+    padding-top:20px;
+}
+
+.right
+{
+	text-align:right;
+}
+
+.left
+{
+	text-align:left;
+}
+
+.bar
+{
+	background-color:steelblue;
+	text-opacity:1;
+}
+.link {
+	float:right;
+}
+

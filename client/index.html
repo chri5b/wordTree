@@ -1,0 +1,634 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+	<title>Arborescence des expressions clefs</title>
+    <link type="text/css" rel="stylesheet" href="style.css"/>
+	<![if (IE 9)|(!IE)]> 
+    <script src="jQuery-1.8.1.js" type="text/javascript"></script>
+    <script type="text/javascript" src="d3.js"></script>
+    <script type="text/javascript" src="d3.layout.js"></script>
+    <script src="search.js" type="text/javascript"></script>
+	 <![endif]>
+  </head>
+  <body>
+  <div class="main">
+        <![if !IE]>
+	<div style="display:none">
+	<![endif]>
+	<![if lt IE 9]>
+		<div>Malheureusement cette visualisation ne marche en Internet Explorer qu'avec la version 9. Veuillez essayer avec Chrome ou Firefox.</div>
+	<![endif]>
+	<![if !IE]>
+	</div>
+	<![endif]>
+
+	<![if (IE 9)|(!IE)]>
+    <div><span>Mot clef: </span><input id="search" value="consentement" />
+	<span id="uNamePwd">
+		<span>Nom d'utilisateur: </span><input id="username" />
+		<span>Mot de passe: </span><input id="password" type="password" />
+	</span>
+    <input id="searchButton" type="button" value="go" />
+	<a id="linkSpan" href="KeyWordList.html" class="link">Liste</a>
+    <div class="error" id="errorDiv">Desolé, mais aucun mot clef correspond a votre recherche</div>
+    </div>
+    <div id="results"></div>
+
+    <div id="body">
+	<svg id="svg">
+		<g id="previs"></g>
+		<g id="vis"></g>
+	</svg>
+    </div>
+    <script type="text/javascript">
+	
+$(document).ready(function() {
+
+    //If someone hits enter then act as if they clicked the search button
+    $("#search,#username,#password").keyup(function(event){
+        if(event.keyCode == 13){
+            $("#searchButton").click();
+        }
+    });
+
+    $("#searchButton").click(function() {
+		doSearch($("#search").val());
+    });
+    
+    //If the 'iFramed' querystring parameter is set, then hide the username and password controls
+    if (window.location.search.indexOf('iFramed=true')!= -1) {
+    	$("#uNamePwd").attr("style","display:none");
+	$("#linkSpan").attr("style","display:none");	
+    }
+	
+    var preTreeData,postTreeData; //variables to hold the results of processing the latest response from the data service, so that when we resize the screen we don't need to requery the data service
+    var rawData; //variable to hold latest raw results, used to highlight words in expressions which span both trees.
+});
+
+var nodeIDCounter = 0;
+
+var diagonal = d3.svg.diagonal()
+    .projection(function(d) { return [d.y, d.x]; });
+
+var userDragging = false;
+
+function getYPosition(d,searchTermWidth,w,depthWidths,preOrPost) {
+	//Calculates horizontal position of this node, given the information about how much space each level in the tree needs
+	var yPosition = 0;
+        for (var i = d.depth ; i > 0; i--) {
+                yPosition += depthWidths[i];
+        }
+
+	if(preOrPost == "pre") {
+		return w/2 - yPosition - searchTermWidth;
+	}
+	else {
+		return yPosition;
+	}
+}
+
+function getFontSize(thisSize,maxSize,textSizeMultiplier){
+	return (Math.sqrt((thisSize/maxSize)*800*textSizeMultiplier))+8;
+
+}
+
+function getTextWidth(text,textSizeMultiplier,maxSize,thisSize) {
+	var marginForCircle = 25;
+	var font = getFontSize(thisSize,maxSize,textSizeMultiplier) + "px Helvetica";	
+        //Create a hidden div with the content and measure its width
+	var o = $('<div>' + text + '</div>')
+            	.css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': font})
+            	.appendTo($('body')),
+      	width = o.width();
+
+  	o.remove();
+
+  	return width + marginForCircle;
+}
+
+function prepareTreeData(tree,source,preOrPost,dimensions) {
+	 // Compute the new tree layout.
+	var nodes = tree.nodes(source).reverse();
+	var rootNode = getRoot(nodes[0]);
+	dimensions.maxSize = calculateMatchingArticles(rootNode);
+	// Calculate width required for each level of depth in the graph
+	var depthWidths = []; // For each level of depth in the tree, stores the maximum pixel width required
+	var searchTermWidth = 0;
+	nodes.forEach(function(d) {
+		d.size = calculateMatchingArticles(d);
+		var widthForThisNode = getTextWidth(d.name,dimensions.textSizeMultiplier,dimensions.maxSize,d.size);
+		if(depthWidths[d.depth]) {
+			if (depthWidths[d.depth] < widthForThisNode) {
+				depthWidths[d.depth] = widthForThisNode;
+			}
+		}
+		else {
+			depthWidths[d.depth] = widthForThisNode;
+		}
+        }); 
+	
+	searchTermWidth = getTextWidth(rootNode.name,dimensions.textSizeMultiplier,1,1); //How many pixels does the word searched for (in the middle of the tree) take up?
+	
+	// Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
+        nodes.forEach(function(d) {
+                d.y = getYPosition(d,searchTermWidth,dimensions.w,depthWidths,preOrPost);
+                if(d.depth==0) {
+                        d.x = dimensions.h/2;
+                }
+        });
+
+	return nodes;
+}
+
+function defineDragBehaviour(preOrPost) {
+	//What happens when you drag depends on what tree you're dragging on, so this sets up the drag behaviour accordingly
+	var drag = d3.behavior.drag()
+                .origin(Object);
+                if(preOrPost == "pre") {
+                        drag
+                                .on("drag", dragmovePre)
+                                .on("dragend", dragendPre);
+                } else {
+                        drag
+                                .on("drag", dragmovePost)
+                                .on("dragend", dragendPost);
+                }
+	return drag;
+}
+
+function addNewNodes(nodes,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source) {
+	
+	//Add an svg group with the interactive behaviour and the appropriate position
+  	var nodeEnter = nodes.enter().append("svg:g")
+      		.attr("class", "node")
+      		.attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+      		.attr("onmouseover", function(d,i) {return "showDragAffordance(" + d.id + "," + d.x + "," + d.y + ",'" + preOrPost + "')";})
+      		.attr("onmouseout", function() {return "hideDragAffordance()"; })
+		.on("click", function(d) { doSearch(d.name); });
+  	
+	//Add the circle
+	nodeEnter.append("svg:circle")
+      		.attr("r", 1e-6)
+      		.call(dragBehaviour)
+      		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+  	
+	//Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
+	nodeEnter.append("svg:text")
+      		.attr("x", function(d) { return (preOrPost == "pre") ? 10 : -10; })
+      		.attr("dy", ".35em")
+      		.attr("text-anchor", function(d) { return (preOrPost == "pre") ? "start" : "end"; })
+      		.attr("font-size",function(d) { return getFontSize(d.size,maxSize,textSizeMultiplier)})
+      		.attr("opacity",function(d) { return Math.sqrt(d.size/maxSize)>0.25 ? 1 : 0.5 })
+      		.attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
+      		.text(function(d) { return preOrPost == "pre" ? (d.depth == 0 ? "" : d.name.replace(/_/g,' ')) : d.name.replace(/_/g,' ') ; })
+      		.call(dragBehaviour)
+      		.style("fill-opacity", 1e-6)
+		.append("svg:title")
+			.text(function(d) { return d.size + ' notices disponibles';});
+}
+
+function transitionExistingNodes(nodes,maxSize,textSizeMultiplier,duration) {
+
+  	// Transition nodes to their new position.
+  	var nodeUpdate = nodes.transition()
+      		.duration(duration)
+      		.attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+  	nodeUpdate.select("circle")
+      		.attr("r", 4.5)
+      		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
+      		.style("stroke", function(d) { return d.name == "" ? "#fff" : "steelblue"; });
+
+  	nodeUpdate.select("text")
+      		.attr("font-size",function(d) { return (((Math.sqrt(d.size/maxSize*800)))*textSizeMultiplier)+8;})
+	  	.style("fill-opacity", 1);
+}
+
+function removeOldNodes(nodes,duration,source) {
+	
+  	// Transition exiting nodes to the parent's new position.
+  	var nodeExit = nodes.exit().transition()
+      		.duration(duration)
+      		.attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+      		.remove();
+
+	// transition the circle to 0 radius
+  	nodeExit.select("circle")
+      		.attr("r", 1e-6);
+
+	// fade out the text
+  	nodeExit.select("text")
+      		.style("fill-opacity", 1e-6);
+}
+
+function addNewLinks(d3LinkData,preOrPost,maxSize,duration,source) {
+
+  	// Enter any new links at the parent's previous position.
+  	d3LinkData.enter().insert("svg:path", "g")
+      		.attr("class", "link")
+      		.attr("opacity", function(d) { return d.target.name == "" ? 0 : 0.2; })
+      		.attr("id",function(d) { return preOrPost + "-link-" + d.target.id; })
+		.attr("d", function(d) {
+        		var o = {x: source.x0, y: source.y0};
+        		return diagonal({source: o, target: o});
+      		})
+      		.attr("stroke-width",function(d) { return (Math.sqrt(d.target.size/maxSize*1000)); })
+    		.transition()
+      			.duration(duration)
+      			.attr("d", diagonal);
+}
+
+function transitionExistingLinks(d3LinkData,duration) {
+	
+  	// Transition links to their new position.
+  	d3LinkData.transition()
+      		.duration(duration)
+      		.attr("d", diagonal);
+}
+
+function removeOldLinks(d3LinkData,source,duration) {
+
+  	// Transition exiting nodes to the parent's new position.
+  	d3LinkData.exit().transition()
+      		.duration(duration)
+      		.attr("d", function(d) {
+        		var o = {x: source.x, y: source.y};
+        		return diagonal({source: o, target: o});
+      		})
+      		.remove();
+}
+
+function drawNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source,duration) {
+	addNewNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source);
+        transitionExistingNodes(d3NodeData,maxSize,textSizeMultiplier);
+        removeOldNodes(d3NodeData,duration,source);
+}
+
+function drawLinks(d3LinkData,preOrPost,maxSize,duration,source) {
+
+	addNewLinks(d3LinkData,preOrPost,maxSize,duration,source);
+	transitionExistingLinks(d3LinkData,duration);
+	removeOldLinks(d3LinkData,source,duration);
+
+}
+
+function update(source,preOrPost,visualisation,d3TreeLayout,dimensions) {
+
+  	// Set vertical alignment of tree in the middle of the screen
+	source.x0 = dimensions.h / 2;
+  	source.y0 = 0;
+  
+	// Set duration for transitions
+  	var duration = 500;
+
+ 	var treeData = prepareTreeData(d3TreeLayout,source,preOrPost,dimensions); 
+  	
+	// use d3 to bind all the svg g elements which have the 'node' class to the tree data
+  	var d3NodeData = visualisation.selectAll("g.node")
+      		.data(treeData, function(d) { return d.id || (d.id = ++nodeIDCounter); });
+
+  	var dragBehaviour = defineDragBehaviour(preOrPost);
+
+	drawNodes(d3NodeData,preOrPost,dragBehaviour,dimensions.maxSize,dimensions.textSizeMultiplier,source,duration);
+
+  	// Use d3 to bind all the svg path elements which have the 'link' class to the tree link data
+  	var d3LinkData = visualisation.selectAll("path.link")
+      		.data(d3TreeLayout.links(treeData), function(d) { return d.target.id; });
+
+	drawLinks(d3LinkData,preOrPost,dimensions.maxSize,duration,source);
+
+  	// Stash the old positions for transition.
+  	d3NodeData.forEach(function(d) {
+    		d.x0 = d.x;
+    		d.y0 = d.y;
+  	});
+}
+
+function hideDragAffordance() {
+	if(!userDragging) {
+		d3.select("#dragAffordance").remove();
+	}
+}
+
+function showDragAffordance(id, x, y, preOrPost) {
+	if(!userDragging) {
+		
+		var dragAffordanceGroup;		
+		var thisX, thisY;
+		 
+		dragAffordanceGroup = d3.select("#svg").append("svg:g");
+
+		$("#svg").mousemove(function(e) {
+			thisX = e.pageX - this.offsetLeft;
+			thisY = e.pageY - this.offsetTop;
+			if(!userDragging) {
+				dragAffordanceGroup
+					.attr("id","dragAffordance")
+					.attr("transform","translate("+ (thisX-15) +","+ (thisY-10) + ")")
+			}
+		});
+
+		$("#"+preOrPost+"-"+id).attr("style","cursor:move;");
+
+                var sliderTrack = dragAffordanceGroup.append("svg:rect")
+                        .attr("width",6)
+                        .attr("rx",3)
+                        .attr("ry",3)
+                        .attr("fill","#ccc")
+                        .attr("stroke","#aaa")
+                        .attr("height",200)
+                        .attr("opacity",0.1)
+			.transition()
+				.delay(200)
+				.duration(500)
+				.attr("opacity",0.5);
+
+
+		var slider = dragAffordanceGroup.append("svg:rect")
+			.attr("transform","translate(-2,0)")
+			.attr("id","dragSlider")
+			.attr("width",10)
+			.attr("height",10)
+			.attr("rx",3)
+			.attr("ry",3)
+			.attr("fill","#dadada")
+			.attr("stroke","#999")
+			.attr("opacity",0.1).transition()
+				.delay(200)
+				.duration(500)
+				.attr("opacity",1);	
+	}
+}
+
+function dragmovePre(d) {
+	dragmove(d,"pre");
+}
+
+function dragmovePost(d) {
+	dragmove(d,"post");
+}
+
+function dragmove(d,preOrPost) {
+	userDragging = true;
+	var verticalDistance = d.y - d3.event.y;
+	var dragLimit = 200;
+	var limitedVerticalDistance = Math.max(0,Math.min(-verticalDistance,dragLimit));
+ 	var leafArray = [];	
+	leafArray = getLeafArray(d,leafArray);
+
+
+	d3.select("#dragSlider")
+		.attr("transform","translate(-2," + limitedVerticalDistance + ")");
+		
+
+	var spacePerSibling = dragLimit/leafArray.length;
+	//Highlight the immediate children
+	removeHighlight(getRoot(d),preOrPost);
+	for (var i = 0; i < leafArray.length ; i++) {
+		var thisNode = getNodeById(leafArray[i],d);
+		if((limitedVerticalDistance > (i * spacePerSibling)) && (limitedVerticalDistance < (i + 1) * spacePerSibling)) {
+			setHighlight(true,thisNode,preOrPost);
+			highlightAncestors(thisNode,preOrPost);
+			highlightOtherTree(thisNode,preOrPost);		
+		}
+		else {
+			setHighlight(false,thisNode,preOrPost);
+		}
+	}
+}
+
+function highlightOtherTree(thisNode,preOrPost) {
+	//For an expression like "divorce par consentement mutuel", when we highlight "mutuel" in one tree, we want "divorce par" to highlight in the other tree. 
+	var matchingExpressionIndex = thisNode.matchingTermIndex;
+	var otherTreeData;
+	if(preOrPost == "pre") {
+		otherTreeData = postTreeData;
+	} else {
+		otherTreeData = preTreeData;
+	} 
+	var otherTreeRoot = getRoot(otherTreeData);
+	var leafNodes = [];
+	leafNodes = getLeafArray(otherTreeRoot,leafNodes);
+	var otherTreePreOrPost = preOrPost=="pre"?"post":"pre";
+	removeHighlight(otherTreeRoot,otherTreePreOrPost);
+	for (var i = 0 ; i < leafNodes.length ; i++) {
+		var thisNode = getNodeById(leafNodes[i],otherTreeRoot);
+		thisNode.highlighted = true;
+		if(thisNode.matchingTermIndex == matchingExpressionIndex) {
+			setHighlight(true,thisNode,otherTreePreOrPost);
+			highlightAncestors(getNodeById(leafNodes[i],otherTreeRoot),otherTreePreOrPost);
+		}
+	} 
+}
+
+function getNodeById(id,node) {
+	if(node.children.length==0) {
+		if (node.id==id) { 
+			return node; 
+		}
+		else {
+			return false;
+		}
+	}
+	else {
+		for(var i = 0; i<node.children.length; i++) {
+			var possibleResponse = getNodeById(id,node.children[i]);
+			if (possibleResponse != false) {
+				return possibleResponse;
+			}
+		}
+	}
+	return false;
+}
+
+function getLeafArray(node,leafArray) {
+	if(node.children.length==0) {
+		leafArray.push(node.id);
+	}
+	else { 
+		for(var i = 0; i<node.children.length; i++) {
+			leafArray.concat(getLeafArray(node.children[i],leafArray));
+		}
+	}
+	return leafArray;
+}
+
+function dragendPre(d) {
+	dragend(d,"pre");
+}
+
+function dragendPost(d) {
+	dragend(d,"post");
+}
+
+function dragend(d,preOrPost) {
+		userDragging = false;
+		hideDragAffordance();
+		var result = "";
+		var root = getRoot(d);
+		if(preOrPost == "post") {
+			result += root.name + " ";
+		}
+		result += getHighlightedWords(root,preOrPost);
+		
+		result = $.trim(result);		
+		removeHighlight(root,preOrPost);
+		console.log("search for '" + result + "' on transactive");
+}
+
+function getHighlightedWords(node,preOrPost) {
+	var result = "";
+	if(node.children.length>0) {
+		for(var i = 0; i<node.children.length; i++) {
+			if (node.children[i].highlighted) {
+				result += node.children[i].name + " ";
+				result += getHighlightedWords(node.children[i]);	
+			}
+		}
+	}
+	if (preOrPost == "pre") {
+		var resultArray = [];
+		resultArray = result.split(" ");
+		resultArray.reverse();
+		result = resultArray.join(" ");
+		result += " " + $("#search").val();
+	}
+	return result;
+}
+
+function getRoot(node) {
+	//recursively climbs the tree until it gets to the root node and returns it.
+	if(node.depth == 0) {
+		return node;
+	}
+	else {
+		return getRoot(node.parent);
+	}
+}
+
+function setHighlight(on,node,preOrPost) {
+	node.highlighted = on;
+	if(on) {
+		d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","bold");
+		d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ff0000;");
+	}
+	else 	{
+		d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","normal");
+		d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ccc;");
+	}
+
+}
+
+function highlightAncestors(node,preOrPost) {
+	//recursively sets highlight to true from a leaf all the way up to the root node.
+	if(node.parent) {
+		setHighlight(true,node.parent,preOrPost);
+		highlightAncestors(node.parent,preOrPost);
+	}
+}
+
+function removeHighlight(node,preOrPost) {
+	//assumes that there is only one path in the hierarchy which is highlighted. Looks for the child which is highlighted, 
+	/// unhighlights it and then removes highlight from its children
+	for (var i = 0 ; i<node.children.length ; i ++) {
+		if(node.children[i].highlighted == true) {
+			setHighlight(false,node.children[i],preOrPost);
+			removeHighlight(node.children[i],preOrPost);
+		}
+	}
+}
+
+// Toggle children.
+function toggle(d) {
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else {
+    d.children = d._children;
+    d._children = null;
+  }
+}
+
+function calculateMatchingArticles(d) {
+    	//recursively sums the number of articles which match all the nodes in the tree under this one.
+	var size = 0;
+    	if(d.children && d.children.length>0) {
+        	for(var i=0;i<d.children.length;i++)
+            	{
+                	size += calculateMatchingArticles(d.children[i]);
+            	}
+    	}
+    	else size += d.value;
+	return size;	
+}
+
+function doSearch(searchTerm) {
+	$("#search").val(searchTerm);
+	search(searchTerm,$("#username").val(),$("#password").val(),function(error,errorText,preTree,postTree,data) { 
+		if(error)
+			{
+				$("#errorDiv").html(errorText).show().fadeOut(2000);	
+			}
+		else
+			
+			postTreeData = postTree;
+			preTreeData = preTree;		
+			rawData = data;
+			redraw(preTreeData,postTreeData);
+
+	});
+}
+
+function redraw(preTreeData,postTreeData) {
+	var d3TreeLayout = d3.layout.tree();
+	var dimensions = calculateDimensions();
+	updateDimensions(dimensions,d3TreeLayout);
+	update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout,dimensions); 
+	update(postTreeData,"post",d3.select("#vis"),d3TreeLayout,dimensions);
+}
+
+function updateDimensions(dimensions,d3TreeLayout) {
+
+	d3TreeLayout.size([dimensions.h, dimensions.w/2]);
+	
+	d3.select("#svg")
+		.attr("width", dimensions.w+'px')
+		.attr("height", (dimensions.h + dimensions.m[0] + dimensions.m[2]) + 'px');
+	
+	d3.select("#vis")
+		.attr("transform", "translate(" + (dimensions.w/2) + "," + dimensions.m[0] + ")");	
+	
+	d3.select("#previs")
+   		.attr("transform", "translate(0," + dimensions.m[0] + ")");
+
+}
+
+
+function calculateDimensions() {
+	var dimensions = {
+		m:[100,20,100,20]
+		,w:0
+		,h:0
+		,textSizeMultiplier:0 //Ensures that font size is appropriate for the space available to the visualisation
+		,maxSize:0};
+
+	dimensions.w = $(window).width() - dimensions.m[1] - dimensions.m[3],
+	dimensions.h = $(window).height() - dimensions.m[0] - dimensions.m[2],
+	dimensions.textSizeMultiplier = dimensions.w/1500;
+
+	return dimensions;
+}
+
+$(window).resize(function() {
+    	redraw(preTreeData,postTreeData);
+});
+
+
+    </script>
+	  <![endif]>	
+    </div>
+
+  </body>
+</html>
