@@ -3,7 +3,7 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-	<title>Arborescence des expressions clefs</title>
+	<title>Word Tree</title>
     <link type="text/css" rel="stylesheet" href="style.css"/>
 	<![if (IE 9)|(!IE)]> 
     <script src="jQuery-1.8.1.js" type="text/javascript"></script>
@@ -18,21 +18,16 @@
 	<div style="display:none">
 	<![endif]>
 	<![if lt IE 9]>
-		<div>Malheureusement cette visualisation ne marche en Internet Explorer qu'avec la version 9. Veuillez essayer avec Chrome ou Firefox.</div>
+		<div>Unfortunately, this visualisation only works in IE9 or above. Please upgrade or use Chrome or Firefox instead.</div>
 	<![endif]>
 	<![if !IE]>
 	</div>
 	<![endif]>
 
 	<![if (IE 9)|(!IE)]>
-    <div><span>Mot clef: </span><input id="search" value="consentement" />
-	<span id="uNamePwd">
-		<span>Nom d'utilisateur: </span><input id="username" />
-		<span>Mot de passe: </span><input id="password" type="password" />
-	</span>
+    <div><span>Key word: </span><input id="search" value="scythe" />
     <input id="searchButton" type="button" value="go" />
-	<a id="linkSpan" href="KeyWordList.html" class="link">Liste</a>
-    <div class="error" id="errorDiv">Desolé, mais aucun mot clef correspond a votre recherche</div>
+    <div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
     </div>
     <div id="results"></div>
 
@@ -47,7 +42,7 @@
 $(document).ready(function() {
 
     //If someone hits enter then act as if they clicked the search button
-    $("#search,#username,#password").keyup(function(event){
+    $("#search").keyup(function(event){
         if(event.keyCode == 13){
             $("#searchButton").click();
         }
@@ -57,12 +52,6 @@ $(document).ready(function() {
 		doSearch($("#search").val());
     });
     
-    //If the 'iFramed' querystring parameter is set, then hide the username and password controls
-    if (window.location.search.indexOf('iFramed=true')!= -1) {
-    	$("#uNamePwd").attr("style","display:none");
-	$("#linkSpan").attr("style","display:none");	
-    }
-	
     var preTreeData,postTreeData; //variables to hold the results of processing the latest response from the data service, so that when we resize the screen we don't need to requery the data service
     var rawData; //variable to hold latest raw results, used to highlight words in expressions which span both trees.
 });

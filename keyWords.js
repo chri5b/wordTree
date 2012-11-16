@@ -2158,3 +2158,4 @@ function keyWords() {
 	];
 }
 
+exports.keyWords = keyWords;
