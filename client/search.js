@@ -91,18 +91,18 @@ function search(searchTerm,username,password,callback) {
 			if(errorData.status==403)
 				{
 					window.console && console.log("username password combination not correct");
-					errorText = "Le nom d'utilisateur ou mot de passe est incorrecte";
+					errorText = "Username or password is incorrect";
 								
 				}
 			else if (errorData.status==404)
 				{
-					errorText = "Aucun mot clef correspond à votre recherche";
-					$("#errorDiv").html("Aucun mot clef correspond à votre recherche").show().fadeOut(2000);				
+					errorText = "There is no content which matches your search";
+					$("#errorDiv").html("No content matches your search").show().fadeOut(2000);				
 				}
 			else
 				{
-					errorText = "Une erreur est survenue";
-					$("#errorDiv").html("Une erreur est survenue").show().fadeOut(2000);	
+					errorText = "An error occurred on the server";
+					$("#errorDiv").html("An error occurred on the server").show().fadeOut(2000);	
 				}
 			callback(error,errorText,null,null,null);
         }
