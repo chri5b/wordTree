@@ -7,6 +7,14 @@ The data (in the keyWords.js file) is currently a list of all the lines from Sha
 
 I intend to rewrite this as a d3 plugin in the future.
 
+Installation
+------------
+
+1) Install [node.js](http://nodejs.org) 
+2) For Windows, run the Node.js command prompt
+3) run 'node index.js' from root directory of the project
+4) navigate in your browser to localhost:8889/client/index.html
+
 Dependencies
 ------------
 
