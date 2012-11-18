@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="qunit-1.10.0.css" />
+	<script src="qunit-1.10.0.js"></script>
+	<script src="../client/treeData.js"></script>
+	<script>
+	function testWordIsNotSearchTerm(first,wordArray) {
+		if(first == true) {
+			myFunction = firstWordIsNotSearchTerm;
+		} else {
+			myFunction = lastWordIsNotSearchTerm;
+		}
+		var singleWordArray = ["words"];
+		equal(myFunction(wordArray,"balloon"),false,"first/last word is search term");
+		equal(myFunction(wordArray,"balloons"),false,"search term is plural form of first/last word");
+		equal(myFunction(wordArray,"Balloon"),false,"first/last word has different capitalisation");
+		equal(myFunction(wordArray,"balloon,"),false,"search term has trailing punctuation");
+		equal(myFunction(wordArray,"moon"),true,"search term is in wordArray but not first/last word");
+		equal(myFunction(wordArray,""),true,"search term is empty string");
+		equal(myFunction(wordArray,"the"),true,"search term is first word");
+		equal(myFunction(wordArray,null),true,"search term is null");
+		equal(myFunction(singleWordArray,"word"),false,"word array has one word, word is singular form of search term");
+		equal(myFunction(singleWordArray,"words"),false,"word array has one word");
+		equal(myFunction(singleWordArray,"foo"),true,"word array has one word, doesn't match search term");
+	}
+	
+	test("lastWordIsNotSearchTerm test", function() {
+		var wordArray = ["the","moon","is","a","balloon"];
+		testWordIsNotSearchTerm(false,wordArray);		
+	});
+	
+	test("firstWordIsNotSearchTerm test", function() {
+		var wordArray = ["balloon","a","is","moon","the"];
+		testWordIsNotSearchTerm(true,wordArray);			
+	});
+	
+	test("removeTrailingPunctuation test", function() {
+		equal(removeTrailingPunctuation("hello"),"hello","don't alter word with no trailing punctuation");
+		equal(removeTrailingPunctuation("Hello"),"hello","to lower case");	
+		equal(removeTrailingPunctuation("hello,"),"hello","remove trailing comma");		
+		equal(removeTrailingPunctuation("hello."),"hello","remove trailing period");	
+		equal(removeTrailingPunctuation("hello:"),"hello","remove trailing colon");	
+		equal(removeTrailingPunctuation("hello;"),"hello","remove trailing semicolon");	
+		equal(removeTrailingPunctuation("hello'"),"hello","remove trailing single quote");	
+		equal(removeTrailingPunctuation("hello?"),"hello","remove trailing question mark");	
+		equal(removeTrailingPunctuation("hello!"),"hello","remove trailing exclamation");
+		equal(removeTrailingPunctuation("hello,,"),"hello","remove multiple trailing punctuation marks");			
+		equal(removeTrailingPunctuation(""),"","empty string");
+		equal(removeTrailingPunctuation(null),null,"null input");	
+	});
+	
+	test("prune term", function() {
+		var wordArray = ["balloon","a","is","moon","the"];
+		var test1Array = wordArray.slice(), 
+			test2Array = wordArray.slice(), 
+			test3Array = wordArray.slice(),
+			test4Array = wordArray.slice(), 
+			test5Array = wordArray.slice()
+			test6Array = wordArray.slice();
+		
+		var singleWordArray = ["balloon"];
+		deepEqual(pruneTerm(test1Array,"is"),["is","moon","the"],"strip initial words if they don't match exactly");
+		deepEqual(pruneTerm(test2Array,"balloon"),["balloon","a","is","moon","the"],"do nothing if first word matches");
+		deepEqual(pruneTerm(test3Array,"foo"),[],"return nothing if nothing matches");
+		deepEqual(pruneTerm(singleWordArray,"balloon"),["balloon"],"single word array which matches");
+		deepEqual(pruneTerm(singleWordArray,"foo"),[],"return nothing if nothing matches, one word");
+		deepEqual(pruneTerm(test4Array,"Balloon"),["balloon","a","is","moon","the"],"Match different capitalisation");
+		deepEqual(pruneTerm(test5Array,"balloon,"),["balloon","a","is","moon","the"],"Match with trailing punctuation");
+		deepEqual(pruneTerm(test6Array,"balloons"),["balloon","a","is","moon","the"],"Match plural form");
+		
+	
+	
+	});
+	</script>
+</head>
+<body>
+	<div id="qunit"></div>
+</body>
+</html>
