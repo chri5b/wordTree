@@ -389,15 +389,24 @@ function dragmove(d,preOrPost) {
 	}
 }
 
+function getTreeData(preOrPost) {
+    var treeData;
+    if(preOrPost == "pre") {
+		treeData = preTreeData;
+	} else {
+		treeData = postTreeData;
+	} 
+    return treeData
+}
+
+function getOther(preOrPost) {
+    return preOrPost=="pre"?"post":"pre";
+}
+
 function highlightOtherTree(thisNode,preOrPost) {
 	//For an expression like "divorce par consentement mutuel", when we highlight "mutuel" in one tree, we want "divorce par" to highlight in the other tree. 
 	var matchingExpressionIndex = thisNode.matchingTermIndex;
-	var otherTreeData;
-	if(preOrPost == "pre") {
-		otherTreeData = postTreeData;
-	} else {
-		otherTreeData = preTreeData;
-	} 
+	var otherTreeData = getTreeData(getOther(preOrPost));
 	var otherTreeRoot = getRoot(otherTreeData);
 	var leafNodes = [];
 	leafNodes = getLeafArray(otherTreeRoot,leafNodes);
@@ -475,8 +484,11 @@ function dragend(d,preOrPost) {
 		hideDragAffordance();
 		var result = "";
 		var root = getRoot(d);
+        var otherTreeData = getTreeData(getOther(preOrPost));
+        var otherTreeRoot = getRoot(otherTreeData);
 		result += getHighlightedWords(root,preOrPost);		
 		removeHighlight(root,preOrPost);
+        removeHighlight(otherTreeRoot,getOther(preOrPost));
 		console.log("search for '" + result + "' on transactive");
 }
 

@@ -58,7 +58,7 @@ function processTreeData(matchingTerms,searchTerm,postTreeData,preTreeData) {
     for(var i = 0; i < matchingTerms.length ; i++) {
         if(matchingTerms[i]) {
             matchingTerms[i].cleanName = matchingTerms[i].name.toString().split(' ');
-            for(var j = 0 ; j< matchingTerms[i].name.length ; j++) {
+            for(var j = 0 ; j< matchingTerms[i].cleanName.length ; j++) {
                 matchingTerms[i].cleanName[j] = removeTrailingPunctuation(matchingTerms[i].cleanName[j]);
             } 
 
