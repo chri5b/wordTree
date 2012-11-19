@@ -30,14 +30,18 @@ function createTree(matchingTerms, searchTerm, callback) {
 }
     
 function handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms){
+    //covered in qUnit    
     //If the search term has spaces in, we want to replace them with underscores because our logic to 
     //  ensure the search term is at the root of all the trees depends on splitting terms by space.
     var originalSearchTerm = searchTerm;
     searchTerm = searchTerm.replace(/ /g,'_');
+
+    var re = new RegExp(originalSearchTerm,"gi")
+    
     for(var i=0;i<matchingTerms.length;i++) {
         if(matchingTerms[i]) {
             //replace every instance of the old search term eg "droit constitutionnel" with "droit_constitutionnel"
-            matchingTerms[i].name = matchingTerms[i].name.replace(originalSearchTerm,searchTerm);
+            matchingTerms[i].name = matchingTerms[i].name.replace(re,searchTerm);
         }
     }
 }

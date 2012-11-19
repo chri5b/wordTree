@@ -232,6 +232,61 @@
         equal(preTreeData2[0].matchingTermIndex,"1","advanced case : pre tree root matchingTermIndex");
         
     });
+    
+    test("handleSpacesInMultiWordSearchTerm test", function() {
+        var searchTerm = "Tennis ball";
+        var matchingTerms = [
+            {"name":"There was once a Tennis ball from Tipperary"},
+            {"name":"Tennis ball, Tennis ball, how fair thou art"},
+            {"name":"tennis ball hello"},
+            {"name":"tennis ball"}
+        ];
+        var actualResult = 
+        handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms);
+        
+        deepEqual(matchingTerms[0],{"name":"There was once a Tennis_ball from Tipperary"},"basic case");
+        deepEqual(matchingTerms[1],{"name":"Tennis_ball, Tennis_ball, how fair thou art"},"multiple examples of search term");
+        deepEqual(matchingTerms[2],{"name":"Tennis_ball hello"},"different capitalisation");
+        deepEqual(matchingTerms[3],{"name":"Tennis_ball"},"just search term present");
+    });
+    
+    test("create tree test", function() {
+        var searchTerm = "Tennis ball";
+        var matchingTerms = [
+            {"name":"tennis ball","value":1},
+            {"name":"bouncy, Tennis ball","value":7}
+        ];
+        var expectedPostTree = [
+            {
+                "name":"tennis ball",
+                "cleanName":"tennis",
+                "value":8,
+                "matchingTermIndex":"0,1",
+                "children": [
+                    {
+                        "name":"tennis ball",
+                        "cleanName":"ball",
+                        "value":1,
+                        "matchingTermIndex":0,
+                        "children": []
+                    },
+                    {
+                        "name":"tennis ball",
+                        "cleanName":"ball",
+                        "value":1,
+                        "matchingTermIndex":1,
+                        "children": []
+                    }
+                ]
+            }
+        ]
+        function myCallback1(error,errorText,postTree,preTree,matchingTerms) {
+            equal(error,false,"no error");
+            equal(errorText,"","no errorText");
+            //deepEqual(postTree,expectedPostTree);
+        }
+        createTree(matchingTerms,searchTerm,myCallback1);
+    });
 	</script>
 </head>
 <body>
