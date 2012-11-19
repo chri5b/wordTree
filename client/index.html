@@ -108,7 +108,7 @@ function prepareTreeData(tree,source,preOrPost,dimensions) {
 	var searchTermWidth = 0;
 	nodes.forEach(function(d) {
 		d.size = calculateMatchingArticles(d);
-		var widthForThisNode = getTextWidth(d.name,dimensions.textSizeMultiplier,dimensions.maxSize,d.size);
+		var widthForThisNode = getTextWidth(d.cleanName,dimensions.textSizeMultiplier,dimensions.maxSize,d.size);
 		if(depthWidths[d.depth]) {
 			if (depthWidths[d.depth] < widthForThisNode) {
 				depthWidths[d.depth] = widthForThisNode;
@@ -119,7 +119,7 @@ function prepareTreeData(tree,source,preOrPost,dimensions) {
 		}
         }); 
 	
-	searchTermWidth = getTextWidth(rootNode.name,dimensions.textSizeMultiplier,1,1); //How many pixels does the word searched for (in the middle of the tree) take up?
+	searchTermWidth = getTextWidth(rootNode.cleanName,dimensions.textSizeMultiplier,1,1); //How many pixels does the word searched for (in the middle of the tree) take up?
 	
 	// Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
         nodes.forEach(function(d) {
@@ -156,7 +156,7 @@ function addNewNodes(nodes,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,so
       		.attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
       		.attr("onmouseover", function(d,i) {return "showDragAffordance(" + d.id + "," + d.x + "," + d.y + ",'" + preOrPost + "')";})
       		.attr("onmouseout", function() {return "hideDragAffordance()"; })
-		.on("click", function(d) { doSearch(d.name); });
+		.on("click", function(d) { doSearch(d.cleanName); });
   	
 	//Add the circle
 	nodeEnter.append("svg:circle")
@@ -172,7 +172,7 @@ function addNewNodes(nodes,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,so
       		.attr("font-size",function(d) { return getFontSize(d.size,maxSize,textSizeMultiplier)})
       		.attr("opacity",function(d) { return Math.sqrt(d.size/maxSize)>0.25 ? 1 : 0.5 })
       		.attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
-      		.text(function(d) { return preOrPost == "pre" ? (d.depth == 0 ? "" : d.name.replace(/_/g,' ')) : d.name.replace(/_/g,' ') ; })
+      		.text(function(d) { return preOrPost == "pre" ? (d.depth == 0 ? "" : d.cleanName.replace(/_/g,' ')) : d.cleanName.replace(/_/g,' ') ; })
       		.call(dragBehaviour)
       		.style("fill-opacity", 1e-6)
 		.append("svg:title")
@@ -189,7 +189,7 @@ function transitionExistingNodes(nodes,maxSize,textSizeMultiplier,duration) {
   	nodeUpdate.select("circle")
       		.attr("r", 4.5)
       		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
-      		.style("stroke", function(d) { return d.name == "" ? "#fff" : "steelblue"; });
+      		.style("stroke", function(d) { return d.cleanName == "" ? "#fff" : "steelblue"; });
 
   	nodeUpdate.select("text")
       		.attr("font-size",function(d) { return (((Math.sqrt(d.size/maxSize*800)))*textSizeMultiplier)+8;})
@@ -218,7 +218,7 @@ function addNewLinks(d3LinkData,preOrPost,maxSize,duration,source) {
   	// Enter any new links at the parent's previous position.
   	d3LinkData.enter().insert("svg:path", "g")
       		.attr("class", "link")
-      		.attr("opacity", function(d) { return d.target.name == "" ? 0 : 0.2; })
+      		.attr("opacity", function(d) { return d.target.cleanName == "" ? 0 : 0.2; })
       		.attr("id",function(d) { return preOrPost + "-link-" + d.target.id; })
 		.attr("d", function(d) {
         		var o = {x: source.x0, y: source.y0};
@@ -406,11 +406,28 @@ function highlightOtherTree(thisNode,preOrPost) {
 	for (var i = 0 ; i < leafNodes.length ; i++) {
 		var thisNode = getNodeById(leafNodes[i],otherTreeRoot);
 		thisNode.highlighted = true;
-		if(thisNode.matchingTermIndex == matchingExpressionIndex) {
+		if(testForCommonExpressionIndices(thisNode.matchingTermIndex,matchingExpressionIndex)) {
 			setHighlight(true,thisNode,otherTreePreOrPost);
 			highlightAncestors(getNodeById(leafNodes[i],otherTreeRoot),otherTreePreOrPost);
 		}
 	} 
+}
+
+function testForCommonExpressionIndices(thisNodeTermIndices,matchingTermIndices) {
+    var thisNodeTermIndexArray = thisNodeTermIndices.split(",");
+    var matchingNodeTermIndexArray = matchingTermIndices.split(",");
+    var matchFound = false;
+    
+    for(var i = 0; i < thisNodeTermIndexArray.length ; i++) {
+        for(var j = 0 ; j < matchingNodeTermIndexArray.length ; j++) {
+            if (thisNodeTermIndexArray[i]==matchingNodeTermIndexArray[j]) {
+                matchFound = true;
+                break;
+            }
+        }
+    }
+    
+    return matchFound;
 }
 
 function getNodeById(id,node) {
@@ -458,12 +475,7 @@ function dragend(d,preOrPost) {
 		hideDragAffordance();
 		var result = "";
 		var root = getRoot(d);
-		if(preOrPost == "post") {
-			result += root.name + " ";
-		}
-		result += getHighlightedWords(root,preOrPost);
-		
-		result = $.trim(result);		
+		result += getHighlightedWords(root,preOrPost);		
 		removeHighlight(root,preOrPost);
 		console.log("search for '" + result + "' on transactive");
 }
@@ -473,18 +485,11 @@ function getHighlightedWords(node,preOrPost) {
 	if(node.children.length>0) {
 		for(var i = 0; i<node.children.length; i++) {
 			if (node.children[i].highlighted) {
-				result += node.children[i].name + " ";
-				result += getHighlightedWords(node.children[i]);	
+				result = getHighlightedWords(node.children[i]);	
 			}
 		}
 	}
-	if (preOrPost == "pre") {
-		var resultArray = [];
-		resultArray = result.split(" ");
-		resultArray.reverse();
-		result = resultArray.join(" ");
-		result += " " + $("#search").val();
-	}
+    result = node.name;
 	return result;
 }
 
@@ -556,7 +561,7 @@ function calculateMatchingArticles(d) {
 
 function doSearch(searchTerm) {
 	$("#search").val(searchTerm);
-	search(searchTerm,$("#username").val(),$("#password").val(),function(error,errorText,preTree,postTree,data) { 
+	search(searchTerm,$("#username").val(),$("#password").val(),function(error,errorText,postTree,preTree,data) { 
 		if(error)
 			{
 				$("#errorDiv").html(errorText).show().fadeOut(2000);	
