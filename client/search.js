@@ -1,8 +1,18 @@
 ﻿var maxKeyWords = 40;
 
-function search(searchTerm,username,password,callback) {
+function getRequest(initialSearchTerm) {
+    var request = $.ajax({
+          url: "/keyWord?",
+          type: "GET",
+          data: {"q":initialSearchTerm},
+          dataType: "json"
+        });
+    return request
+}
+
+function searchAndProcess(searchTerm,callback) {
         //only whole words will match. We also try to match against the search term with s on the end to naively catch plurals.
-        var error = false;
+    var error = false;
 	var errorText = "";
 	var referrerHost = parseUri(document.referrer).host;
 	

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+        <script type="text/javascript" src="jQuery-1.8.1.js" ></script>
+        <script type="text/javascript" src="d3.js"></script>
+        <script type="text/javascript" src="d3.layout.js"></script>
+        <script type="text/javascript" src="search.js"></script>
+        <script type="text/javascript" src="../plugin/wordTree.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                var initialSearchTerm = "eyes";
+            
+                var tree = wordTree()
+                    .searchTerm(initialSearchTerm)
+                    .width(1000)
+                    .height(500)
+                    .maxResults(20)
+                    .margins([10,10,10,10])
+                    .nameAccessor(function(d) {return d.name;})
+                    .valueAccessor(function(d) {return d.value;})
+                    .onClick(function(d) { updateTree(d.cleanName); });
+                   
+                var request = getRequest(initialSearchTerm)
+
+                request.done(function(data) {
+                    d3.select("#target")
+                        .datum(data)
+                        .call(tree);
+                });
+                
+                
+                function updateTree(searchTerm) {
+                    var request = getRequest(searchTerm)
+                    
+                    tree.searchTerm(searchTerm);
+                    
+                    request.done(function (data) {
+                        d3.select("#target")
+                            .datum(data)
+                            .call(tree);
+                    });
+                }
+            });
+        </script>
+  </head>
+  <body>
+        <div id="target"></div>
+  </body>
+</html>

@@ -237,8 +237,8 @@ function removeOldLinks(d3LinkData,source,duration) {
 
 function drawNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source,duration) {
 	addNewNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source);
-        transitionExistingNodes(d3NodeData,maxSize,textSizeMultiplier);
-        removeOldNodes(d3NodeData,duration,source);
+    transitionExistingNodes(d3NodeData,maxSize,textSizeMultiplier);
+    removeOldNodes(d3NodeData,duration,source);
 }
 
 function drawLinks(d3LinkData,preOrPost,maxSize,duration,source) {
@@ -326,6 +326,10 @@ function redraw(preTreeData,postTreeData) {
 	var d3TreeLayout = d3.layout.tree();
 	var dimensions = calculateDimensions();
 	updateDimensions(dimensions,d3TreeLayout);
+    d3.select("#svg")
+        .append("svg:g").attr("id","previs");
+    d3.select("#svg")
+        .append("svg:g").attr("id","vis");
 	update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout,dimensions); 
 	update(postTreeData,"post",d3.select("#vis"),d3TreeLayout,dimensions);
 }
