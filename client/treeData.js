@@ -1,5 +1,5 @@
 function createTree(matchingTerms, searchTerm, callback) {
-
+    //partially covered in qUnit
     var postTree = [];
     var preTree = [];
     var postTreeData = [];

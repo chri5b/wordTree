@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="qunit-1.10.0.css" />
+	<script src="qunit-1.10.0.js"></script>
+    <script type="text/javascript" src="../client/d3.js"></script>
+    <script type="text/javascript" src="../client/jQuery-1.8.1.js" ></script>
+	<script src="../client/dragBehaviour.js"></script>
+	<script>
+
+    test("getOther test", function() {
+        equal(getOther("pre"),"post","test pre returns post");
+        equal(getOther("post"),"pre","test post returns pre");
+        equal(getOther("Pre"),"post","test case insensitivity");
+        raises(
+            function() {
+                getOther("blah");
+            },
+            function(err) {
+                return err.message === 'invalid input';
+            },
+            'test exception for invalid input'
+        );
+    });
+    
+    test("testForCommonExpressionIndices test", function() {
+        var thisTermIndices = "1,2,3,4";
+        var thatTermIndices = "4,5,6,7";
+        var thatTermIndices1 = "5,6,7";
+        var emptyTermIndices = "";
+        var consecutiveCommas = "1,2,,4";
+        
+        equal(testForCommonExpressionIndices(thisTermIndices,thatTermIndices),true,"test overlap");
+        equal(testForCommonExpressionIndices(thisTermIndices,thatTermIndices1),false,"test no overlap");
+        equal(testForCommonExpressionIndices(thisTermIndices,emptyTermIndices),false,"test empty term index");
+        equal(testForCommonExpressionIndices(thisTermIndices,consecutiveCommas),true,"test consecutive commas with overlap");
+        
+    });
+    
+    test("showDragAffordance test",function () {
+        var userDragging = false;
+        var id = 0;
+        var x=0,y=0;
+        var preOrPost = "pre";
+        
+        showDragAffordance(id,x,y,preOrPost);
+        event= $.Event("mousedrag");
+        event.pageX = 0;
+        event.pageY = 0;
+        $(document).trigger(event);
+        
+        var dragSlider = $("#dragSlider");
+        
+        equal(dragSlider.attr("width"),10,"dragSlider width")
+        equal(dragSlider.attr("height"),10,"dragSlider height");
+        
+        var dragTrack = $("#sliderTrack");
+        
+        equal(dragTrack.attr("width"),6,"dragTrack width");
+        equal(dragTrack.attr("height"),200,"dragTrack height");
+        
+        $("#svg").empty();
+         
+    });
+   
+	</script>
+</head>
+<body>
+	<div id="qunit"></div>
+    <div id="qunit-fixture">
+        <svg id="svg">
+        
+        </svg>
+    </div>
+</body>
+</html>

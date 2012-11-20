@@ -251,42 +251,95 @@
     });
     
     test("create tree test", function() {
-        var searchTerm = "Tennis ball";
-        var matchingTerms = [
+        var searchTerm1 = "tennis";
+        var matchingTerms1 = [
             {"name":"tennis ball","value":1},
-            {"name":"bouncy, Tennis ball","value":7}
+            {"name":"bouncy, tennis ball fun","value":7}
         ];
-        var expectedPostTree = [
+        var expectedPostTree1 = 
             {
+                "children": [
+                    {
+                        "children": [
+                            {
+                            "children": [],
+                            "name":"bouncy, tennis ball fun",
+                            "cleanName":"fun",
+                            "value":7,
+                            "matchingTermIndex":"1"
+                            }
+                        ],
+                        "name":"tennis ball",
+                        "cleanName":"ball",
+                        "value":8,
+                        "matchingTermIndex":"0,1"
+                    }
+                ],
                 "name":"tennis ball",
                 "cleanName":"tennis",
                 "value":8,
                 "matchingTermIndex":"0,1",
+            };
+            
+        var searchTerm2 = "tennis";
+        var matchingTerms2 = [
+            {"name":"Tennis ball","value":1},
+            {"name":"bouncy, TENNIS court fun","value":7}
+        ];
+        var expectedPostTree2 = 
+            {
                 "children": [
                     {
-                        "name":"tennis ball",
+                        "children": [],
+                        "name":"Tennis ball",
                         "cleanName":"ball",
                         "value":1,
-                        "matchingTermIndex":0,
-                        "children": []
+                        "matchingTermIndex":"0"
                     },
                     {
-                        "name":"tennis ball",
-                        "cleanName":"ball",
-                        "value":1,
-                        "matchingTermIndex":1,
-                        "children": []
+                        "children": [
+                            {
+                            "children": [],
+                            "name":"bouncy, TENNIS court fun",
+                            "cleanName":"fun",
+                            "value":7,
+                            "matchingTermIndex":"1"
+                            }
+                        ],
+                        "name":"bouncy, TENNIS court fun",
+                        "cleanName":"court",
+                        "value":7,
+                        "matchingTermIndex":"1"
                     }
-                ]
-            }
-        ]
-        function myCallback1(error,errorText,postTree,preTree,matchingTerms) {
+                ],
+                "name":"Tennis ball",
+                "cleanName":"tennis",
+                "value":8,
+                "matchingTermIndex":"0,1",
+            };
+        
+    function createTreeTestHelper(matchingTerms,searchTerm,expectedPostTree) {
+        function myCallback(error,errorText,postTree,preTree,matchingTerms) {
             equal(error,false,"no error");
             equal(errorText,"","no errorText");
-            //deepEqual(postTree,expectedPostTree);
+            equal(postTree.name,expectedPostTree.name,"root name equal");
+            equal(postTree.cleanName, expectedPostTree.cleanName, "root cleanName equal");
+            equal(postTree.value,expectedPostTree.value,"root value equal");
+            equal(postTree.matchingTermIndex, expectedPostTree.matchingTermIndex, "root matchingTermIndex equal");
+            equal(postTree.children.length,expectedPostTree.children.length, "root number of children");
+            equal(postTree.children[0].name,expectedPostTree.children[0].name, "first child name");
+            equal(postTree.children[0].cleanName,expectedPostTree.children[0].cleanName, "first child cleanName");
+            equal(postTree.children[0].children.length,expectedPostTree.children[0].children.length, "first child number of children");
+            equal(postTree.children[0].value,expectedPostTree.children[0].value, "first child value");
+            equal(postTree.children[0].matchingTermIndex,expectedPostTree.children[0].matchingTermIndex, "first child matchingTermIndex");
         }
-        createTree(matchingTerms,searchTerm,myCallback1);
+        createTree(matchingTerms,searchTerm,myCallback);
+        }
+        
+        createTreeTestHelper(matchingTerms1,searchTerm1,expectedPostTree1);
+        createTreeTestHelper(matchingTerms2,searchTerm2,expectedPostTree2);
     });
+   
 	</script>
 </head>
 <body>
