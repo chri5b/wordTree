@@ -47,15 +47,26 @@ function wordTree() {
         createTree(relevantData,searchTerm,function(error,errorText,postTreeData,preTreeData,d) {
             my.preTreeData(preTreeData);
             my.postTreeData(postTreeData);
-            my.maxSize(Math.max(preTreeData.value,postTreeData.value));
+            if(preTreeData && postTreeData) {
+                my.maxSize(Math.max(preTreeData.value,postTreeData.value));
+            } else if (preTreeData && !postTreeData) {
+                my.maxSize(preTreeData.value);
+            } else {
+                my.maxSize(postTreeData.value);
+            }
+            
             
             var previs = d3.select("#previs");
             var vis = d3.select("#vis");
             previs.empty();
             vis.empty();
             d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width()/2 - (my.margins()[1] + my.margins()[3])]);
-            update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout); 
-            update(postTreeData,"post",d3.select("#vis"),d3TreeLayout);        
+            if (preTreeData) {
+                update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout); 
+            }
+            if (postTreeData) {
+                update(postTreeData,"post",d3.select("#vis"),d3TreeLayout);        
+            }
         });
         
 
@@ -155,6 +166,7 @@ function wordTree() {
         
         if (searchTerm.indexOf(' ') != -1) {
             handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms)
+            searchTerm = searchTerm.replace(/ /g,"_");
         }
         
         processTreeData(matchingTerms,searchTerm,postTreeData,preTreeData);
@@ -457,9 +469,12 @@ function wordTree() {
         //Highlight the immediate children
         var rootNode = getRoot(d);
         var otherTreeData = getTreeData(getOther(preOrPost));
-        var otherTreeRoot = getRoot(otherTreeData);
+        if(otherTreeData) {
+            var otherTreeRoot = getRoot(otherTreeData);
+            removeHighlight(otherTreeRoot,getOther(preOrPost));
+        }
         removeHighlight(rootNode,preOrPost);
-        removeHighlight(otherTreeRoot,getOther(preOrPost));
+
         for (var i = 0; i < leafArray.length ; i++) {
             var thisNode = getNodeFromBothTrees(leafArray[i].id);
             if((limitedVerticalDistance > (i * spacePerSibling)) && (limitedVerticalDistance < (i + 1) * spacePerSibling)) {
@@ -476,7 +491,9 @@ function wordTree() {
     
     function highlightTree(preOrPost,expressionID) {
         var treeData = getTreeData(preOrPost);
-        recursivelySetHighlight(treeData,preOrPost,expressionID);
+        if(treeData) {
+            recursivelySetHighlight(treeData,preOrPost,expressionID);
+        }
     }
     
     function recursivelySetHighlight(node,preOrPost,expressionID) {
@@ -533,12 +550,14 @@ function wordTree() {
     function getNodeFromBothTrees(id) {
         var preRoot = getRoot(getTreeData("pre"));
         var postRoot = getRoot(getTreeData("post"));
-        var nodeFromPreRoot = getNodeById(id,preRoot);
-        if(nodeFromPreRoot==false){
-            return getNodeById(id,postRoot);
-        } else {
-            return nodeFromPreRoot;
+        var result = false
+        if (preRoot) {
+            result = getNodeById(id,preRoot);
         }
+        if (result==false && postRoot){
+            result = getNodeById(id,postRoot);
+        }
+        return result;
     }
     
 
@@ -548,8 +567,10 @@ function wordTree() {
             if(node == getRoot(node)){
                 //collect leaves from both trees because the user selected the central word
                 var otherTreeData = getTreeData(getOther(preOrPost));
-                var otherTreeRoot = getRoot(otherTreeData);
-                leafArray.concat(getLeafArray(otherTreeRoot,leafArray,false,getOther(preOrPost))); //watch out for potential infinite loop here
+                if(otherTreeData) {
+                    var otherTreeRoot = getRoot(otherTreeData);
+                    leafArray.concat(getLeafArray(otherTreeRoot,leafArray,false,getOther(preOrPost))); //watch out for potential infinite loop here
+                }
             } else {
                 //we want the user to be able to select any node on each tree to traverse the whole tree
                 node = getRoot(node)
@@ -605,27 +626,33 @@ function wordTree() {
     }
     
     function getHighlightFromTree(node,preOrPost) {
-        var result = false;
-        if(node.children.length>0) {
-            for(var i = 0; i<node.children.length; i++) {
-                if (node.children[i].highlighted) {
-                    result = getHighlightFromTree(node.children[i],preOrPost);	
+        var result = false;        
+        if(node) {
+            if(node.children.length>0) {
+                for(var i = 0; i<node.children.length; i++) {
+                    if (node.children[i].highlighted) {
+                        result = getHighlightFromTree(node.children[i],preOrPost);	
+                    }
                 }
+            } else {
+                result = node;
+                result.name = result.name.replace(/_/g,' ');
             }
-        } else {
-            result = node;
         }
         return result;
     }
     
     function getRoot(node) {
         //recursively climbs the tree until it gets to the root node and returns it.
-        if(node.depth == 0) {
-            return node;
+        if(node) {
+            if(node.depth == 0) {
+                return node;
+            }
+            else {
+                return getRoot(node.parent);
+            }
         }
-        else {
-            return getRoot(node.parent);
-        }
+        return false;
     }
 
     function setHighlight(on,node,preOrPost) {
@@ -644,10 +671,12 @@ function wordTree() {
     function removeHighlight(node,preOrPost) {
         //Looks for the child which is highlighted, 
         //  unhighlights it and then removes highlight from its children
-        setHighlight(false,node,preOrPost);
-        for (var i = 0 ; i<node.children.length ; i++) {
-            if(node.children[i].highlighted == true) {
-                removeHighlight(node.children[i],preOrPost);
+        if(node) {
+            setHighlight(false,node,preOrPost);
+            for (var i = 0 ; i<node.children.length ; i++) {
+                if(node.children[i].highlighted == true) {
+                    removeHighlight(node.children[i],preOrPost);
+                }
             }
         }
     }
@@ -749,13 +778,30 @@ function wordTree() {
                 .attr("font-size",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier())})
                 .attr("opacity",function(d) { return Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
                 .attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
-                .text(function(d) { return preOrPost == "pre" ? (d.depth == 0 ? "" : d.cleanName.replace(/_/g,' ')) : d.cleanName.replace(/_/g,' ') ; })
+                .text(function(d) { return getNodeText(d,preOrPost);})
                 .call(dragBehaviour)
                 .style("fill-opacity", 1e-6)
             .append("svg:title")
                 .text(function(d) { if(d.value>1) {return d.value + ' expressions use this word';} else {return '1 expression uses this word';}});
     }
 
+    function getNodeText(d,preOrPost) {
+        var result = "";
+        var name = "";
+        if (d.pluralAndSingular) { //If we have plural and singular forms on the same branch (i.e. ball and balls) then we should show ball(s)
+            name = d.ambiguousName;
+        } else {
+            name = d.cleanName;
+        }
+        name = name.replace(/_/g,' '); //substitute any underscores with spaces (for multi-word search terms)
+        if (d.depth == 0 && preOrPost == "pre") { //don't show the search term on the preTree, because its already present on the postTree
+            result = "";
+        } else {
+            result = name;
+        }
+        return result;
+    }
+    
     function transitionExistingNodes(nodes,duration) {
 
         // Transition nodes to their new position.
@@ -871,7 +917,22 @@ DataTree.prototype.getChildIndex = function(Name) {
     result = -1;
     for(var i=0;i<this.children.length;i++)
     {
-        if (this.children[i].cleanName == Name || this.children[i].cleanName + 's' == Name || this.children[i].cleanName == Name + 's') {result = i; break; }
+        if (this.children[i].cleanName == Name) {
+            result = i; 
+            break; 
+        }
+        if (this.children[i].cleanName + 's' == Name) {
+            result = i;
+            this.children[i].pluralAndSingular = true;
+            this.children[i].ambiguousName = this.children[i].cleanName + "(s)";
+            break;
+        }
+        if (this.children[i].cleanName == Name + 's') {
+            result = i;
+            this.children[i].pluralAndSingular = true;
+            this.children[i].ambiguousName = this.children[i].cleanName.substr(0,this.children[i].cleanName.length-1) + "(s)";
+            break;
+        }
     }
     return result;
 };
