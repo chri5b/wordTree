@@ -10,54 +10,6 @@ function getRequest(initialSearchTerm) {
     return request
 }
 
-function searchAndProcess(searchTerm,callback) {
-        //only whole words will match. We also try to match against the search term with s on the end to naively catch plurals.
-    var error = false;
-	var errorText = "";
-	var referrerHost = parseUri(document.referrer).host;
-	
-		$.ajax({
-        		type:"GET",
-        		url: "/keyWord?",
-        		data: {
-            			"q":searchTerm,
-				"username":username,
-				"password":password,
-				"referrer":referrerHost
-	            },
-        dataType:"json",
-        success: function(data) {
-			data.length = maxKeyWords;
-            createTree(data,searchTerm,function(error,errorText,postTree,preTree,data) { 
-
-				callback(error,errorText,postTree,preTree,data);
-			});
-        },
-        error: function(errorData,errorCode) {
-			error = true;
-			
-			window.console && console.log(errorData);
-			if(errorData.status==403)
-				{
-					window.console && console.log("username password combination not correct");
-					errorText = "Username or password is incorrect";
-								
-				}
-			else if (errorData.status==404)
-				{
-					errorText = "There is no content which matches your search";
-					$("#errorDiv").html("No content matches your search").show().fadeOut(2000);				
-				}
-			else
-				{
-					errorText = "An error occurred on the server";
-					$("#errorDiv").html("An error occurred on the server").show().fadeOut(2000);	
-				}
-			callback(error,errorText,null,null,null);
-        }
-    });
-}
-
 // parseUri 1.2.2
 // // (c) Steven Levithan <stevenlevithan.com>
 // // MIT License

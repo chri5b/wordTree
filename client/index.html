@@ -1,379 +1,106 @@
-
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-	<title>Word Tree</title>
-    <link type="text/css" rel="stylesheet" href="style.css"/>
-	<![if (IE 9)|(!IE)]> 
-    <script type="text/javascript" src="jQuery-1.8.1.js" ></script>
-    <script type="text/javascript" src="d3.js"></script>
-    <script type="text/javascript" src="d3.layout.js"></script>
-	<script type="text/javascript" src="treeData.js"></script>
-    <script type="text/javascript" src="dragBehaviour.js"></script>
-    <script type="text/javascript" src="search.js"></script>
-	 <![endif]>
-  </head>
-  <body>
-  <div class="main">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+        <title>Word Tree</title>
+        <link type="text/css" rel="stylesheet" href="style.css"/>
+        <![if (IE 9)|(!IE)]> 
+        <script type="text/javascript" src="jQuery-1.8.1.js" ></script>
+        <script type="text/javascript" src="d3.js"></script>
+        <script type="text/javascript" src="d3.layout.js"></script>
+        <script type="text/javascript" src="../plugin/wordTree.js"></script>
+        <script type="text/javascript" src="search.js"></script>
+         <![endif]>
+    </head>
+    <body>
+        <div class="main">
         <![if !IE]>
-	<div style="display:none">
-	<![endif]>
-	<![if lt IE 9]>
-		<div>Unfortunately, this visualisation only works in IE9 or above. Please upgrade or use Chrome or Firefox instead.</div>
-	<![endif]>
-	<![if !IE]>
-	</div>
-	<![endif]>
+        <div style="display:none">
+        <![endif]>
+        <![if lt IE 9]>
+        <div>Unfortunately, this visualisation only works in IE9 or above. Please upgrade or use Chrome or Firefox instead.</div>
+        <![endif]>
+        <![if !IE]>
+        </div>
+        <![endif]>
 
-	<![if (IE 9)|(!IE)]>
-    <div><span>Key word: </span><input id="search" value="scythe" />
-    <input id="searchButton" type="button" value="go" />
-    <div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
-    </div>
-    <div id="results"></div>
+        <![if (IE 9)|(!IE)]>
+        <div><span>Key word: </span><input id="search" value="scythe" />
+        <input id="searchButton" type="button" value="go" />
+        <div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
+        </div>
+        <div id="results"></div>
+        <script type="text/javascript">
+            $(document).ready(function() {
+                //If someone hits enter then act as if they clicked the search button
+                $("#search").keyup(function(event){
+                    if(event.keyCode == 13){
+                        $("#searchButton").click();
+                    }
+                });
 
-    <div id="body">
-	<svg id="svg">
-		<g id="previs"></g>
-		<g id="vis"></g>
-	</svg>
-    </div>
-    <script type="text/javascript">
-	
-$(document).ready(function() {
-
-    //If someone hits enter then act as if they clicked the search button
-    $("#search").keyup(function(event){
-        if(event.keyCode == 13){
-            $("#searchButton").click();
-        }
-    });
-
-    $("#searchButton").click(function() {
-		doSearch($("#search").val());
-    });
-    
-    var preTreeData,postTreeData; //variables to hold the results of processing the latest response from the data service, so that when we resize the screen we don't need to requery the data service
-    var rawData; //variable to hold latest raw results, used to highlight words in expressions which span both trees.
-});
-
-var nodeIDCounter = 0;
-
-var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });
-
-function getYPosition(d,searchTermWidth,w,depthWidths,preOrPost) {
-	//Calculates horizontal position of this node, given the information about how much space each level in the tree needs
-	var yPosition = 0;
-        for (var i = d.depth ; i > 0; i--) {
-                yPosition += depthWidths[i];
-        }
-
-	if(preOrPost == "pre") {
-		return w/2 - yPosition - searchTermWidth;
-	}
-	else {
-		return yPosition;
-	}
-}
-
-function getFontSize(thisSize,maxSize,textSizeMultiplier){
-	return (Math.sqrt((thisSize/maxSize)*800*textSizeMultiplier))+8;
-
-}
-
-function getTextWidth(text,textSizeMultiplier,maxSize,thisSize) {
-	var marginForCircle = 25;
-	var font = getFontSize(thisSize,maxSize,textSizeMultiplier) + "px Helvetica";	
-        //Create a hidden div with the content and measure its width
-	var o = $('<div>' + text + '</div>')
-            	.css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': font})
-            	.appendTo($('body')),
-      	width = o.width();
-
-  	o.remove();
-
-  	return width + marginForCircle;
-}
-
-function prepareTreeData(tree,source,preOrPost,dimensions) {
-	 // Compute the new tree layout.
-	var nodes = tree.nodes(source).reverse();
-	var rootNode = getRoot(nodes[0]);
-	dimensions.maxSize = calculateMatchingArticles(rootNode);
-	// Calculate width required for each level of depth in the graph
-	var depthWidths = []; // For each level of depth in the tree, stores the maximum pixel width required
-	var searchTermWidth = 0;
-	nodes.forEach(function(d) {
-		d.size = calculateMatchingArticles(d);
-		var widthForThisNode = getTextWidth(d.cleanName,dimensions.textSizeMultiplier,dimensions.maxSize,d.size);
-		if(depthWidths[d.depth]) {
-			if (depthWidths[d.depth] < widthForThisNode) {
-				depthWidths[d.depth] = widthForThisNode;
-			}
-		}
-		else {
-			depthWidths[d.depth] = widthForThisNode;
-		}
-        }); 
-	
-	searchTermWidth = getTextWidth(rootNode.cleanName,dimensions.textSizeMultiplier,1,1); //How many pixels does the word searched for (in the middle of the tree) take up?
-	
-	// Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
-        nodes.forEach(function(d) {
-                d.y = getYPosition(d,searchTermWidth,dimensions.w,depthWidths,preOrPost);
-                if(d.depth==0) {
-                        d.x = dimensions.h/2;
+                $("#searchButton").click(function() {
+                    updateTree($("#search").val());
+                });
+                
+                var initialSearchTerm = "scythe";
+                         
+                //configure the tree visualisation
+                var tree = wordTree()
+                    .searchTerm(initialSearchTerm)
+                    .width($(window).width())
+                    .height($(window).height()-150)
+                    .maxResults(5)
+                    .margins([10,10,10,10])
+                    .onClick(function(d) { updateTree(d.cleanName); })
+                    .onDragEnd(function(d) { })
+                    .mouseoverText(function(d) { return d.name; })
+                    .maxDepth(10);
+                
+                function updateTree(searchTerm) {
+                    //update the search input box with the new searchTerm (in case this is called from the onClick event of one of the nodes
+                    $("#search").val(searchTerm);
+                    $("#selectedText").empty();
+                    
+                    //Request the data
+                    var request = getRequest(searchTerm)
+                    
+                    //Update the visualisation settings
+                    tree.searchTerm(searchTerm)
+                        .width($(window).width())
+                        .height($(window).height()-100);
+                    
+                    //redraw the tree when the data returns
+                    request.done(function (data) {
+                        d3.select("#results")
+                            .datum(data)
+                            .call(tree);
+                    });
+                    
+                    request.fail(function(errorData, textStatus) {
+                        window.console && console.log(errorData);
+                        if (errorData.status==404) {
+                            errorText = "There is no content which matches your search";
+                            $("#errorDiv").html(errorText).show().fadeOut(2000);				
+                        }
+                        else {
+                            errorText = "An error occurred on the server";
+                            $("#errorDiv").html(errorText).show().fadeOut(2000);	
+                        }
+                    });
                 }
-        });
-
-	return nodes;
-}
-
-
-
-function addNewNodes(nodes,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source) {
-	
-	//Add an svg group with the interactive behaviour and the appropriate position
-  	var nodeEnter = nodes.enter().append("svg:g")
-      		.attr("class", "node")
-      		.attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      		.attr("onmouseover", function(d,i) {return "showDragAffordance(" + d.id + "," + d.x + "," + d.y + ",'" + preOrPost + "')";})
-      		.attr("onmouseout", function() {return "hideDragAffordance()"; })
-		.on("click", function(d) { doSearch(d.cleanName); });
-  	
-	//Add the circle
-	nodeEnter.append("svg:circle")
-      		.attr("r", 1e-6)
-      		.call(dragBehaviour)
-      		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
-  	
-	//Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
-	nodeEnter.append("svg:text")
-      		.attr("x", function(d) { return (preOrPost == "pre") ? 10 : -10; })
-      		.attr("dy", ".35em")
-      		.attr("text-anchor", function(d) { return (preOrPost == "pre") ? "start" : "end"; })
-      		.attr("font-size",function(d) { return getFontSize(d.size,maxSize,textSizeMultiplier)})
-      		.attr("opacity",function(d) { return Math.sqrt(d.size/maxSize)>0.25 ? 1 : 0.5 })
-      		.attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
-      		.text(function(d) { return preOrPost == "pre" ? (d.depth == 0 ? "" : d.cleanName.replace(/_/g,' ')) : d.cleanName.replace(/_/g,' ') ; })
-      		.call(dragBehaviour)
-      		.style("fill-opacity", 1e-6)
-		.append("svg:title")
-			.text(function(d) { if(d.size>1) {return d.size + ' expressions use this word';} else {return '1 expression uses this word';}});
-}
-
-function transitionExistingNodes(nodes,maxSize,textSizeMultiplier,duration) {
-
-  	// Transition nodes to their new position.
-  	var nodeUpdate = nodes.transition()
-      		.duration(duration)
-      		.attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
-
-  	nodeUpdate.select("circle")
-      		.attr("r", 4.5)
-      		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
-      		.style("stroke", function(d) { return d.cleanName == "" ? "#fff" : "steelblue"; });
-
-  	nodeUpdate.select("text")
-      		.attr("font-size",function(d) { return (((Math.sqrt(d.size/maxSize*800)))*textSizeMultiplier)+8;})
-	  	.style("fill-opacity", 1);
-}
-
-function removeOldNodes(nodes,duration,source) {
-	
-  	// Transition exiting nodes to the parent's new position.
-  	var nodeExit = nodes.exit().transition()
-      		.duration(duration)
-      		.attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
-      		.remove();
-
-	// transition the circle to 0 radius
-  	nodeExit.select("circle")
-      		.attr("r", 1e-6);
-
-	// fade out the text
-  	nodeExit.select("text")
-      		.style("fill-opacity", 1e-6);
-}
-
-function addNewLinks(d3LinkData,preOrPost,maxSize,duration,source) {
-
-  	// Enter any new links at the parent's previous position.
-  	d3LinkData.enter().insert("svg:path", "g")
-      		.attr("class", "link")
-      		.attr("opacity", function(d) { return d.target.cleanName == "" ? 0 : 0.2; })
-      		.attr("id",function(d) { return preOrPost + "-link-" + d.target.id; })
-		.attr("d", function(d) {
-        		var o = {x: source.x0, y: source.y0};
-        		return diagonal({source: o, target: o});
-      		})
-      		.attr("stroke-width",function(d) { return (Math.sqrt(d.target.size/maxSize*1000)); })
-    		.transition()
-      			.duration(duration)
-      			.attr("d", diagonal);
-}
-
-function transitionExistingLinks(d3LinkData,duration) {
-	
-  	// Transition links to their new position.
-  	d3LinkData.transition()
-      		.duration(duration)
-      		.attr("d", diagonal);
-}
-
-function removeOldLinks(d3LinkData,source,duration) {
-
-  	// Transition exiting nodes to the parent's new position.
-  	d3LinkData.exit().transition()
-      		.duration(duration)
-      		.attr("d", function(d) {
-        		var o = {x: source.x, y: source.y};
-        		return diagonal({source: o, target: o});
-      		})
-      		.remove();
-}
-
-function drawNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source,duration) {
-	addNewNodes(d3NodeData,preOrPost,dragBehaviour,maxSize,textSizeMultiplier,source);
-    transitionExistingNodes(d3NodeData,maxSize,textSizeMultiplier);
-    removeOldNodes(d3NodeData,duration,source);
-}
-
-function drawLinks(d3LinkData,preOrPost,maxSize,duration,source) {
-
-	addNewLinks(d3LinkData,preOrPost,maxSize,duration,source);
-	transitionExistingLinks(d3LinkData,duration);
-	removeOldLinks(d3LinkData,source,duration);
-
-}
-
-function update(source,preOrPost,visualisation,d3TreeLayout,dimensions) {
-
-  	// Set vertical alignment of tree in the middle of the screen
-	source.x0 = dimensions.h / 2;
-  	source.y0 = 0;
-  
-	// Set duration for transitions
-  	var duration = 500;
-
- 	var treeData = prepareTreeData(d3TreeLayout,source,preOrPost,dimensions); 
-  	
-	// use d3 to bind all the svg g elements which have the 'node' class to the tree data
-  	var d3NodeData = visualisation.selectAll("g.node")
-      		.data(treeData, function(d) { return d.id || (d.id = ++nodeIDCounter); });
-
-  	var dragBehaviour = defineDragBehaviour(preOrPost);
-
-	drawNodes(d3NodeData,preOrPost,dragBehaviour,dimensions.maxSize,dimensions.textSizeMultiplier,source,duration);
-
-  	// Use d3 to bind all the svg path elements which have the 'link' class to the tree link data
-  	var d3LinkData = visualisation.selectAll("path.link")
-      		.data(d3TreeLayout.links(treeData), function(d) { return d.target.id; });
-
-	drawLinks(d3LinkData,preOrPost,dimensions.maxSize,duration,source);
-
-  	// Stash the old positions for transition.
-  	d3NodeData.forEach(function(d) {
-    		d.x0 = d.x;
-    		d.y0 = d.y;
-  	});
-}
-
-// Toggle children.
-function toggle(d) {
-  if (d.children) {
-    d._children = d.children;
-    d.children = null;
-  } else {
-    d.children = d._children;
-    d._children = null;
-  }
-}
-
-function calculateMatchingArticles(d) {
-    	//recursively sums the number of articles which match all the nodes in the tree under this one.
-	var size = 0;
-    	if(d.children && d.children.length>0) {
-        	for(var i=0;i<d.children.length;i++)
-            	{
-                	size += calculateMatchingArticles(d.children[i]);
-            	}
-    	}
-    	else size += d.value;
-	return size;	
-}
-
-function doSearch(searchTerm) {
-	$("#search").val(searchTerm);
-	search(searchTerm,$("#username").val(),$("#password").val(),function(error,errorText,postTree,preTree,data) { 
-		if(error)
-			{
-				$("#errorDiv").html(errorText).show().fadeOut(2000);	
-			}
-		else
-			
-			postTreeData = postTree;
-			preTreeData = preTree;		
-			rawData = data;
-			redraw(preTreeData,postTreeData);
-
-	});
-}
-
-function redraw(preTreeData,postTreeData) {
-	var d3TreeLayout = d3.layout.tree();
-	var dimensions = calculateDimensions();
-	updateDimensions(dimensions,d3TreeLayout);
-    d3.select("#svg")
-        .append("svg:g").attr("id","previs");
-    d3.select("#svg")
-        .append("svg:g").attr("id","vis");
-	update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout,dimensions); 
-	update(postTreeData,"post",d3.select("#vis"),d3TreeLayout,dimensions);
-}
-
-function updateDimensions(dimensions,d3TreeLayout) {
-
-	d3TreeLayout.size([dimensions.h, dimensions.w/2]);
-	
-	d3.select("#svg")
-		.attr("width", dimensions.w+'px')
-		.attr("height", (dimensions.h + dimensions.m[0] + dimensions.m[2]) + 'px');
-	
-	d3.select("#vis")
-		.attr("transform", "translate(" + (dimensions.w/2) + "," + dimensions.m[0] + ")");	
-	
-	d3.select("#previs")
-   		.attr("transform", "translate(0," + dimensions.m[0] + ")");
-
-}
-
-
-function calculateDimensions() {
-	var dimensions = {
-		m:[100,20,100,20]
-		,w:0
-		,h:0
-		,textSizeMultiplier:0 //Ensures that font size is appropriate for the space available to the visualisation
-		,maxSize:0};
-
-	dimensions.w = $(window).width() - dimensions.m[1] - dimensions.m[3],
-	dimensions.h = $(window).height() - dimensions.m[0] - dimensions.m[2],
-	dimensions.textSizeMultiplier = dimensions.w/1500;
-
-	return dimensions;
-}
-
-$(window).resize(function() {
-    	redraw(preTreeData,postTreeData);
-});
-
-
-    </script>
-	  <![endif]>	
-    </div>
-
-  </body>
+                
+                $(window).resize(function() {
+                    //If we resize the window, redraw the tree without requesting new data.
+                    tree
+                        .width($(window).width())
+                        .height($(window).height()-150);         
+                    d3.select("#results")
+                        .call(tree);  
+                });   
+            });
+        </script>
+        <![endif]>	
+        </div>
+    </body>
 </html>
