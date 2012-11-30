@@ -101,7 +101,7 @@ function copyKeyWords(myKeyWords,rawKeyWords,searchTerm,callback) {
 function filterKeyWords(keyWords,searchTerm,callback) {
 		console.time("filterKeyWords");
         //only whole words will match. We also try to match against the search term with s on the end to naively catch plurals.
-        var regex = new RegExp("(^|\\s)"+searchTerm+"(s)?(\\s|$)");
+        var regex = new RegExp("(^|\\s)"+searchTerm+"(s)?(\\s|$|[,.?:!;'])","i");
 		
         var filteredKeyWords = keyWords.filter(function(keyword) {
             return keyword.name.toString().search(regex) != -1;

@@ -68,9 +68,14 @@ function wordTree() {
             if (preTreeData) {
                 update(preTreeData,"pre",d3.select("#previs"),d3TreeLayout); 
             }
-            if (postTreeData) {
-                update(postTreeData,"post",d3.select("#vis"),d3TreeLayout);        
+            if (!postTreeData) {
+                postTreeData = {
+                    cleanName:searchTerm,
+                    depth:0,
+                    value:my.maxSize()
+                }
             }
+            update(postTreeData,"post",d3.select("#vis"),d3TreeLayout); 
         });
         
 
