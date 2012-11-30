@@ -247,40 +247,77 @@ function wordTree() {
         //  searchTerm: 		tennis
         //  matchingTerms[0]: 	tennis ball - goes straight into post tree
         //  matchingTerms[1]: 	bouncy, tennis ball - goes into both trees but needs to be pruned each way
-        //  matchingTerms[2]: 	all I want is Tennis! - goes into pre-tree, but needs to be reversed because both trees expects the search term to be the first word
+        //  matchingTerms[2]: 	all I want is Tennis! - goes into pre-tree, but needs to be reversed because both trees expect the search term to be the first word
         //output (ignoring value)
         //  postTreeData :		[['tennis','ball'],['tennis','ball']]
         //  preTreeData :		[['tennis','bouncy'],['tennis','is','want','i','all']]
 
+        var newTerms = [];
+        
         for(var i = 0; i < matchingTerms.length ; i++) {
             if(matchingTerms[i]) {
                 matchingTerms[i].cleanName = matchingTerms[i].name.toString().split(' ');
                 for(var j = 0 ; j< matchingTerms[i].cleanName.length ; j++) {
                     matchingTerms[i].cleanName[j] = removeTrailingPunctuation(matchingTerms[i].cleanName[j]);
                 } 
-
+                
+                var foundSearchTerms = findSearchTerms(matchingTerms[i],searchTerm);
+                
+                for (var j = 0 ; j < foundSearchTerms.length ; j++) {
+                    if(j==0) { 
+                        matchingTerms[i].searchTermIndex = foundSearchTerms[j]; 
+                    } else { 
+                        //If the search term occurs multiple times in a single matching term then make a new term and index the appropriate search term.
+                        var newTerm = {}
+                        newTerm.cleanName = matchingTerms[i].cleanName.slice(0);
+                        newTerm.name = matchingTerms[i].name;
+                        newTerm.value = matchingTerms[i].value;
+                        newTerm.searchTermIndex = foundSearchTerms[j];
+                        newTerms.push(newTerm);
+                    }                    
+                }
+            }
+        }
+        matchingTermsWithDuplicates = matchingTerms.concat(newTerms);
+        
+        for(var i = 0; i < matchingTermsWithDuplicates.length ; i++) {
+            if(matchingTermsWithDuplicates[i]) {    
                 //If the last word isn't the search term then put it into pre-Tree
-                if(lastWordIsNotSearchTerm(matchingTerms[i].cleanName,searchTerm)) {
-                    var preTerm = createTerm(matchingTerms[i],i,searchTerm,false);
-                    postTreeData.push(preTerm);
+                if(lastWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
+                    var preTerm = createTerm(matchingTermsWithDuplicates[i],i,searchTerm,false);
+                    preTreeData.push(preTerm);
                 }
                 //If the first word isn't the search term, then put it into post-Tree 
-                if(firstWordIsNotSearchTerm(matchingTerms[i].cleanName,searchTerm)) {
-                    var postTerm = createTerm(matchingTerms[i],i,searchTerm,true);
-                    preTreeData.push(postTerm);
+                if(firstWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
+                    var postTerm = createTerm(matchingTermsWithDuplicates[i],i,searchTerm,true);
+                    postTreeData.push(postTerm);
                 } 
             }
         }
     }
 
+    function findSearchTerms(matchingTerm,searchTerm) {
+        var foundTerms = [];
+        for (var i = 0; i < matchingTerm.cleanName.length ; i++) {
+            if (!wordIsNotSearchTerm(matchingTerm.cleanName,searchTerm,i)) {
+                foundTerms.push(i);
+            }
+        }
+        return foundTerms;
+    }
+    
     function createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost) {
         //covered by qUnit
         //assumes cleaned and lowercase terms
         var newTerm = {};
         newTerm.name=matchingTerm.name
         newTerm.cleanName =matchingTerm.cleanName.slice(0);
-        if(isPost) {newTerm.cleanName.reverse();}
-        newTerm.cleanName= pruneTerm(newTerm.cleanName,searchTerm);
+        var searchTermIndex = matchingTerm.searchTermIndex;
+        if(!isPost) {
+            newTerm.cleanName.reverse();
+            searchTermIndex = (newTerm.cleanName.length-1) - searchTermIndex;
+        }
+        newTerm.cleanName= pruneTerm(newTerm.cleanName,searchTermIndex);
         newTerm.value=matchingTerm.value;
         newTerm.matchingTermIndex=matchingTermIndex;
         return newTerm;
@@ -310,25 +347,20 @@ function wordTree() {
 
     function lastWordIsNotSearchTerm(wordArray,searchTerm) {
         //covered by qUnit
-        return wordIsNotSearchTerm(wordArray,searchTerm,false);
+        return wordIsNotSearchTerm(wordArray,searchTerm,0);
     }
 
     function firstWordIsNotSearchTerm(wordArray,searchTerm) {
         //covered by qUnit
-        return wordIsNotSearchTerm(wordArray,searchTerm,true);
+        return wordIsNotSearchTerm(wordArray,searchTerm,wordArray.length-1);
     }
 
-    function wordIsNotSearchTerm(wordArray,searchTerm,first) {
+    function wordIsNotSearchTerm(wordArray,searchTerm,index) {
         //covered by qUnit
-        var wordIndex;
-        if (first==true) {
-            wordIndex = 0;
-        } else {
-            wordIndex = wordArray.length-1;
-        }
+        var wordIndex = index;
         
         if (searchTerm) {
-            cleanedSearchTerm = removeTrailingPunctuation(searchTerm)
+            cleanedSearchTerm = removeTrailingPunctuation(searchTerm);
             var word = removeTrailingPunctuation(wordArray[wordIndex]);
             if(word == cleanedSearchTerm) {
                 return false;
@@ -355,15 +387,12 @@ function wordTree() {
         return null;
     }
 
-    function pruneTerm(wordArray,searchTerm) {
+    function pruneTerm(wordArray,searchTermIndex) {
         //covered by qunit
         //delete words at the front of the expression if they don't match the search term
         //necessary because both the pre and the post tree have expressions where the search term is in the middle.
-        
-        while(wordIsNotSearchTerm(wordArray,searchTerm,true)) {
-            if (wordArray.length == 0) {break;}
-            wordArray.shift();
-        }
+        var prunedArray = wordArray.splice(0,searchTermIndex);
+
         return wordArray;
     }	
 
