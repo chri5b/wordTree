@@ -424,14 +424,22 @@ function wordTree() {
         // Set duration for transitions
         var duration = 500;
 
-        var treeData = prepareTreeData(d3TreeLayout,source,preOrPost); 
+        // Compute the new tree layout.
+        var nodes = d3TreeLayout.nodes(source).reverse();
+        var rootNode = getRoot(nodes[0]);
+        searchTermWidth = getTextWidth(rootNode.cleanName,my.maxSize()); //How many pixels does the word searched for (in the middle of the tree) take up?
+        
+        
+        var treeData = prepareTreeData(nodes,source,preOrPost,searchTermWidth); 
         
         // use d3 to bind all the svg g elements which have the 'node' class to the tree data
         var d3NodeData = visualisation.selectAll("g.node")
                 .data(treeData, function(d) { return d.id || (d.id = ++nodeIDCounter); });
 
         var dragBehaviour = defineDragBehaviour(preOrPost);
-
+        
+        drawRootLink(searchTermWidth,my.height()/2);
+        
         drawNodes(d3NodeData,preOrPost,dragBehaviour,source,duration);
 
         // Use d3 to bind all the svg path elements which have the 'link' class to the tree link data
@@ -447,13 +455,10 @@ function wordTree() {
         });
     }
 
-    function prepareTreeData(tree,source,preOrPost) {
-         // Compute the new tree layout.
-        var nodes = tree.nodes(source).reverse();
-        var rootNode = getRoot(nodes[0]);
+    function prepareTreeData(nodes,source,preOrPost,searchTermWidth) {
+
         // Calculate width required for each level of depth in the graph
         var depthWidths = []; // For each level of depth in the tree, stores the maximum pixel width required
-        var searchTermWidth = 0;
         nodes.forEach(function(d) {
             var widthForThisNode = getTextWidth(d.cleanName,d.value);
             if(depthWidths[d.depth]) {
@@ -465,8 +470,6 @@ function wordTree() {
                 depthWidths[d.depth] = widthForThisNode;
             }
         }); 
-        
-        searchTermWidth = getTextWidth(rootNode.cleanName,my.maxSize()); //How many pixels does the word searched for (in the middle of the tree) take up?
         
         spaceForTree = getSpaceForTree(searchTermWidth);
         
@@ -747,13 +750,23 @@ function wordTree() {
 
     function setHighlight(on,node,preOrPost) {
         node.highlighted = on;
+
+        
         if(on) {
             d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","bold");
             d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ff0000;");
+            if(node.depth == 0) {
+                d3.select("#rootnode").attr("font-weight","bold");
+                d3.select("#rootlink").attr("style","stroke:#ff0000;");
+            }
         }
         else 	{
             d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","normal");
             d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ccc;");
+            if(node.depth == 0) {
+                d3.select("#rootnode").attr("font-weight","normal");
+                d3.select("#rootlink").attr("style","stroke:#ccc;");                
+            }
         }
 
     }
@@ -846,6 +859,25 @@ function wordTree() {
         addNewNodes(d3NodeData,preOrPost,dragBehaviour,source);
         transitionExistingNodes(d3NodeData);
         removeOldNodes(d3NodeData,duration,source);
+    }
+    
+    function drawRootLink(searchTermWidth,height) {
+        if($("#rootlink").length==0) {
+            d3.select("#vis")
+                .append("svg:line")
+                    .attr("x1", -searchTermWidth)
+                    .attr("x2", 0)
+                    .attr("y1", height)
+                    .attr("y2", height)
+                    .attr("id","rootlink")
+                    .style("stroke", "#ccc")
+                    .attr("opacity",0.2)
+                    .attr("stroke-width", 30)
+                    .attr("class","line");
+        } else {
+            $("#rootlink")
+                .attr("x1", -searchTermWidth);
+        }
     }
 
     function drawLinks(d3LinkData,preOrPost,duration,source) {
@@ -959,12 +991,11 @@ function wordTree() {
     }
 
     function addNewLinks(d3LinkData,preOrPost,duration,source) {
-
-        // Enter any new links at the parent's previous position.
+        
         d3LinkData.enter().insert("svg:path", "g")
                 .attr("class", "link")
-                .attr("opacity", function(d) { return d.target.cleanName == "" ? 0 : 0.2; })
-                .attr("id",function(d) { return preOrPost + "-link-" + d.target.id; })
+                .attr("opacity", 0.2)
+                .attr("id",function(d) { return d.depth == 0 ? "rootlink" : preOrPost + "-link-" + d.target.id; })
                 .attr("d", function(d) {
                     var o = {x: source.x0, y: source.y0};
                     return diagonal({source: o, target: o});
