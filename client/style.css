@@ -11,9 +11,10 @@ body {
   stroke-width: 1.5px;
 }
 
-path.link {
+.link {
   fill: none;
   stroke: #ccc;
+  stroke-linecap: round;
 }
 
 .main 
