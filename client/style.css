@@ -2,7 +2,7 @@ body {
   overflow: hidden;
   margin: 0;
   font-size: 14px;
-  font-family: "Helvetica Neue", Helvetica;
+  font-family: 'Verdana', serif;
 }
 
 .node circle {
@@ -11,9 +11,23 @@ body {
   stroke-width: 1.5px;
 }
 
-path.link {
+line.link, path.link{
   fill: none;
   stroke: #ccc;
+  stroke-linecap: round;
+  opacity:0.2;
+}
+
+text.link{
+  font-weight:normal;
+}
+
+text.highlight {
+    font-weight:bold;
+}
+
+line.highlight, path.highlight{
+    stroke: red;
 }
 
 .main 
@@ -42,8 +56,5 @@ path.link {
 {
 	background-color:steelblue;
 	text-opacity:1;
-}
-.link {
-	float:right;
 }
 

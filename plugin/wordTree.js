@@ -12,7 +12,9 @@ function wordTree() {
       onDragEnd = function(d) { console.log(d.name + " selected"); },
       maxResults = 40,
       maxDepth = 20,
-      mouseoverText = function(d) { return d.name; };
+      mouseoverText = function(d) { return d.name; },
+      useButtonNav = false,
+      onButtonClick = function(d) {};
 
   function my(selection) {
     selection.each(function(d,i) {
@@ -92,6 +94,18 @@ function wordTree() {
   my.maxSize = function(value) {
     if (!arguments.length) return maxSize;
     maxSize = value;
+    return my;
+  };
+  
+  my.onButtonClick = function(value) {
+    if (!arguments.length) return onButtonClick;
+    onButtonClick = value;
+    return my;
+  };
+ 
+  my.useButtonNav = function(value) {
+    if (!arguments.length) return useButtonNav;
+    useButtonNav = value;
     return my;
   };
   
@@ -331,7 +345,7 @@ function wordTree() {
         
         //for each matching term, make a data tree
         for(var i=0;i<inputData.length;i++) {
-            result[i] = new DataTree(inputData[i].name, inputData[i].cleanName, inputData[i].value, inputData[i].matchingTermIndex,0,my.maxDepth());
+            result[i] = new DataTree(inputData[i].name, inputData[i].cleanName, inputData[i].value, inputData[i].matchingTermIndex,0,my.maxDepth(),false,my.useButtonNav());
         }
         
         //merge all the data trees together (unless there's only one result)
@@ -598,12 +612,14 @@ function wordTree() {
     }
     
     function setHighlightIfExpressionIDMatches(node,expressionID,preOrPost) {
-        var nodeTermIndexArray = node.matchingTermIndex.split(",");
-        var expressionIDArray = expressionID.split(",");
-        for (var i = 0 ; i < nodeTermIndexArray.length ; i++) {
-            for (var j = 0 ; j < expressionIDArray.length ; j++) {
-                if (nodeTermIndexArray[i] == expressionIDArray[j]) {
-                    setHighlight(true,node,preOrPost);
+        if (node.isButton == false) {
+            var nodeTermIndexArray = node.matchingTermIndex.split(",");
+            var expressionIDArray = expressionID.split(",");
+            for (var i = 0 ; i < nodeTermIndexArray.length ; i++) {
+                for (var j = 0 ; j < expressionIDArray.length ; j++) {
+                    if (nodeTermIndexArray[i] == expressionIDArray[j]) {
+                        setHighlight(true,node,preOrPost);
+                    }
                 }
             }
         }
@@ -753,19 +769,19 @@ function wordTree() {
         node.highlighted = on;
 
         if(on) {
-            $("#" + preOrPost + "-" + node.id).addClass("highlight");
-            $("#" + preOrPost + "-link-" + node.id).addClass("highlight");
+            $("#" + preOrPost + "-" + node.id).attr("class","link highlight");
+            $("#" + preOrPost + "-link-" + node.id).attr("class","link highlight");
             if(node.depth == 0) {
-                $("#rootnode").addClass("highlight");
-                $("#rootlink").addClass("highlight");
+                $("#rootnode").attr("class","link highlight");
+                $("#rootlink").attr("class","link highlight");
             }
         }
         else 	{
-            $("#" + preOrPost + "-" + node.id).removeClass("highlight");
-            $("#" + preOrPost + "-link-" + node.id).removeClass("highlight");
+            $("#" + preOrPost + "-" + node.id).attr("class","link");
+            $("#" + preOrPost + "-link-" + node.id).attr("class","link");
             if(node.depth == 0) {
-                $("#rootnode").removeClass("highlight");
-                $("#rootlink").removeClass("highlight");
+                $("#rootnode").attr("class","link");
+                $("#rootlink").attr("class","link");
             }
         }
 
@@ -813,10 +829,23 @@ function wordTree() {
     }
 
     function getTextWidth(text,thisSize) {
+    
+        //create a dummy element to pick up the CSS attributes from it. 
+        //could refactor this out of this function to avoid doing all this work for all the nodes.
+        //or first search for existing text elements and fall back to creating one if its missing.
+        var element = $('<text>i</text>').css({'visibility':'hidden'}).appendTo($('#previs'));
         var marginForCircle = 20;
-        var font = getFontSize(thisSize) + "px Helvetica";	
+        var fontStyle = element.css('font-style');
+        var fontVariant = element.css('font-variant');
+        var fontWeight = element.css('font-weight');
+        var fontFamily = element.css('font-family');
+        element.remove();
+         
+        //build the font attribute with the correct attributes
+        var font = fontStyle + " " + fontVariant + " " + fontWeight + " " + getFontSize(thisSize) + "px " + fontFamily;	
+        
         //Create a hidden div with the content and measure its width
-        var o = $('<div>' + text + '</div>')
+        var o = $('<text>' + text + '</text>')
                     .css({'position': 'absolute', 'float': 'left', 'white-space': 'nowrap', 'visibility': 'hidden', 'font': font})
                     .appendTo($('body')),
             width = o.width();
@@ -878,7 +907,6 @@ function wordTree() {
                 .attr("x2", 0)
                 .attr("y1", height)
                 .attr("y2", height);
-                
         }
     }
 
@@ -897,9 +925,9 @@ function wordTree() {
         var mouseoverText = my.mouseoverText();
         
         var nodeEnter = nodes.enter().append("svg:g")
-                .attr("class", "node")
+                .attr("class", function(d) { return d.isButton ? "buttonnode" : "node";})
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-                .attr("onmouseover", function(d,i) {return "showDragAffordance(" + d.id + "," + d.x + "," + d.y + ",'" + preOrPost + "')";})
+                .on("mouseover", showLinkButton)
                 .attr("onmouseout", function() {return "hideDragAffordance()"; })
                 .on("click", onClickBehaviour);
         
@@ -907,7 +935,8 @@ function wordTree() {
         nodeEnter.append("svg:circle")
             .attr("r", 1e-6)
             .call(dragBehaviour)
-            .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+            .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
+            .style("opacity", function(d) { return d.isButton ? 0 : 1; }); //hide the circle for buttons
         
         //Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
         nodeEnter.append("svg:text")
@@ -915,7 +944,7 @@ function wordTree() {
                 .attr("dy", ".35em")
                 .attr("text-anchor", function(d) { return (preOrPost == "pre") ? "start" : "end"; })
                 .attr("font-size",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier())})
-                .attr("opacity",function(d) { return Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
+                .attr("opacity",function(d) { return d.isButton ? 0 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
                 .attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
                 .text(function(d) { return getNodeText(d,preOrPost);})
                 .call(dragBehaviour)
@@ -958,7 +987,21 @@ function wordTree() {
                 .attr("font-size",function(d) { return (((Math.sqrt(d.value/ my.maxSize() *800)))* my.textSizeMultiplier() )+8;})
             .style("fill-opacity", 1);
     }
-   
+    
+    function doSearch(searchTerm) {
+	search(searchTerm,function(error,errorText,postTree,preTree,data) { 
+		if(error)
+			{
+				$("#errorDiv").html(errorText).show().fadeOut(2000);	
+			}
+		else
+			
+			postTreeData = postTree;
+			preTreeData = preTree;		
+			rawData = data;
+			redraw(preTreeData,postTreeData);
+
+	});
 }
 
     function removeOldNodes(nodes,duration,source) {
@@ -981,8 +1024,8 @@ function wordTree() {
     function addNewLinks(d3LinkData,preOrPost,duration,source) {
         
         d3LinkData.enter().insert("svg:path", "g")
-                .attr("class", "link")
-                .attr("opacity", 0.2)
+                .attr("class", function(d) { return d.target.isButton ? "buttonlink" : "link";})
+                .attr("opacity", function(d) { return d.target.isButton ? 0 : 0.2;})
                 .attr("id",function(d) { return d.depth == 0 ? "rootlink" : preOrPost + "-link-" + d.target.id; })
                 .attr("d", function(d) {
                     var o = {x: source.x0, y: source.y0};
@@ -1014,10 +1057,30 @@ function wordTree() {
                 .remove();
     }
     
+    function showLinkButton(d){
+        var preOrPost = this.lastChild.id.substr(0,this.lastChild.id.indexOf("-"));
+        var childButtonIds = [];
+        findChildButtons(d,childButtonIds);
+        for (var i = 0 ; i < childButtonIds.length ; i++) {
+            $("#" + preOrPost + "-" + childButtonIds[i].toString()).attr("opacity",1);    
+        }
+
+    }
+
+    function findChildButtons(node,childButtonIds) {
+        for(var i = 0; i < node.children.length; i++) {
+            if (node.children[i].isButton) {
+                childButtonIds.push(node.children[i].id);
+            } else {
+                childButtonIds = findChildButtons(node.children[i],childButtonIds);
+            }
+        }
+        return childButtonIds;
+    }
     
 }
 
-function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth) {
+function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,stopChildren,useButtonNav) {
     //covered by qUnit
     this.name;
     this.cleanName;
@@ -1026,15 +1089,19 @@ function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth) 
     this.children = [];
     this.isLeaf = false;
     this.depth = depth;
+    this.isButton = stopChildren;
     
     this.name = originalPhrase;
     this.cleanName = phrase[0];
     phrase.shift();
 
     if (phrase.length != 0 && depth < maxDepth) {
-        this.children.push(new DataTree(originalPhrase,phrase,value,matchingTermIndex,this.depth+1,maxDepth));
+        this.children.push(new DataTree(originalPhrase,phrase,value,matchingTermIndex,this.depth+1,maxDepth,false,useButtonNav));
     } else {
         this.isLeaf = true;
+        if ((depth == maxDepth || phrase.length==0) && !stopChildren && useButtonNav) {
+            this.children.push(new DataTree(originalPhrase,["Go"],value,matchingTermIndex,this.depth+1,this.depth+1,true,useButtonNav));
+        }
     }
    
 }
@@ -1129,4 +1196,5 @@ var userDragging = false;
 var nodeIDCounter = 0;
 
 var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });       
+    .projection(function(d) { return [d.y, d.x]; });
+        

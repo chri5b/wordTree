@@ -55,7 +55,8 @@
                     .onClick(function(d) { updateTree(d.cleanName); })
                     .onDragEnd(function(d) { })
                     .mouseoverText(function(d) { return d.name; })
-                    .maxDepth(10);
+                    .maxDepth(10)
+                    .useButtonNav(true);
                 
                 function updateTree(searchTerm) {
                     //update the search input box with the new searchTerm (in case this is called from the onClick event of one of the nodes
