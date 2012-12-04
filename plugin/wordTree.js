@@ -987,22 +987,6 @@ function wordTree() {
                 .attr("font-size",function(d) { return (((Math.sqrt(d.value/ my.maxSize() *800)))* my.textSizeMultiplier() )+8;})
             .style("fill-opacity", 1);
     }
-    
-    function doSearch(searchTerm) {
-	search(searchTerm,function(error,errorText,postTree,preTree,data) { 
-		if(error)
-			{
-				$("#errorDiv").html(errorText).show().fadeOut(2000);	
-			}
-		else
-			
-			postTreeData = postTree;
-			preTreeData = preTree;		
-			rawData = data;
-			redraw(preTreeData,postTreeData);
-
-	});
-}
 
     function removeOldNodes(nodes,duration,source) {
         
