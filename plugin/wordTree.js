@@ -2,16 +2,17 @@ function wordTree() {
   var margins = [20,20,20,20],
       width = $(window).width() - margins[1] - margins[3],
       height = $(window).height() - margins[0] - margins[2],
-      textSizeMultiplier = width/2000;
-      maxSize =0;
-      preTreeData = [];
-      postTreeData = [];
-      nameAccessor = function(d) { return d.name; };
-      valueAccessor = function(d) { return d.value; };
-      onClick = function(d) {};
-      onDragEnd = function(d) { console.log(d.name + " selected"); };
-      maxResults = 40;
-      maxDepth = 20;
+      textSizeMultiplier = width/2000,
+      maxSize =0,
+      preTreeData = [],
+      postTreeData = [],
+      nameAccessor = function(d) { return d.name; },
+      valueAccessor = function(d) { return d.value; },
+      onClick = function(d) {},
+      onDragEnd = function(d) { console.log(d.name + " selected"); },
+      maxResults = 40,
+      maxDepth = 20,
+      mouseoverText = function(d) { return d.name; };
 
   function my(selection) {
     selection.each(function(d,i) {
@@ -751,21 +752,20 @@ function wordTree() {
     function setHighlight(on,node,preOrPost) {
         node.highlighted = on;
 
-        
         if(on) {
-            d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","bold");
-            d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ff0000;");
+            $("#" + preOrPost + "-" + node.id).addClass("highlight");
+            $("#" + preOrPost + "-link-" + node.id).addClass("highlight");
             if(node.depth == 0) {
-                d3.select("#rootnode").attr("font-weight","bold");
-                d3.select("#rootlink").attr("style","stroke:#ff0000;");
+                $("#rootnode").addClass("highlight");
+                $("#rootlink").addClass("highlight");
             }
         }
         else 	{
-            d3.select("#" + preOrPost + "-" + node.id).attr("font-weight","normal");
-            d3.select("#" + preOrPost + "-link-" + node.id).attr("style","stroke:#ccc;");
+            $("#" + preOrPost + "-" + node.id).removeClass("highlight");
+            $("#" + preOrPost + "-link-" + node.id).removeClass("highlight");
             if(node.depth == 0) {
-                d3.select("#rootnode").attr("font-weight","normal");
-                d3.select("#rootlink").attr("style","stroke:#ccc;");                
+                $("#rootnode").removeClass("highlight");
+                $("#rootlink").removeClass("highlight");
             }
         }
 
@@ -870,13 +870,15 @@ function wordTree() {
                     .attr("y1", height)
                     .attr("y2", height)
                     .attr("id","rootlink")
-                    .style("stroke", "#ccc")
-                    .attr("opacity",0.2)
                     .attr("stroke-width", 30)
-                    .attr("class","line");
+                    .attr("class","link");
         } else {
             $("#rootlink")
-                .attr("x1", -searchTermWidth);
+                .attr("x1", -searchTermWidth)
+                .attr("x2", 0)
+                .attr("y1", height)
+                .attr("y2", height);
+                
         }
     }
 
@@ -956,21 +958,7 @@ function wordTree() {
                 .attr("font-size",function(d) { return (((Math.sqrt(d.value/ my.maxSize() *800)))* my.textSizeMultiplier() )+8;})
             .style("fill-opacity", 1);
     }
-    
-    function doSearch(searchTerm) {
-	search(searchTerm,function(error,errorText,postTree,preTree,data) { 
-		if(error)
-			{
-				$("#errorDiv").html(errorText).show().fadeOut(2000);	
-			}
-		else
-			
-			postTreeData = postTree;
-			preTreeData = preTree;		
-			rawData = data;
-			redraw(preTreeData,postTreeData);
-
-	});
+   
 }
 
     function removeOldNodes(nodes,duration,source) {
@@ -1141,5 +1129,4 @@ var userDragging = false;
 var nodeIDCounter = 0;
 
 var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });
-        
+    .projection(function(d) { return [d.y, d.x]; });       
