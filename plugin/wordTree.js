@@ -14,7 +14,8 @@ function wordTree() {
       maxDepth = 20,
       mouseoverText = function(d) { return d.name; },
       useButtonNav = false,
-      onButtonClick = function(d) {};
+      onButtonClick = function(d) {},
+      buttonText = function(d) { return ["Go"]; };
 
   function my(selection) {
     selection.each(function(d,i) {
@@ -106,6 +107,12 @@ function wordTree() {
   my.useButtonNav = function(value) {
     if (!arguments.length) return useButtonNav;
     useButtonNav = value;
+    return my;
+  };
+  
+  my.buttonText = function(value) {
+    if (!arguments.length) return buttonText;
+    buttonText = value;
     return my;
   };
   
@@ -345,7 +352,7 @@ function wordTree() {
         
         //for each matching term, make a data tree
         for(var i=0;i<inputData.length;i++) {
-            result[i] = new DataTree(inputData[i].name, inputData[i].cleanName, inputData[i].value, inputData[i].matchingTermIndex,0,my.maxDepth(),false,my.useButtonNav());
+            result[i] = new DataTree(inputData[i].name, inputData[i].cleanName, inputData[i].value, inputData[i].matchingTermIndex,0,my.maxDepth(),false,my.useButtonNav(),my.buttonText(),my.onButtonClick());
         }
         
         //merge all the data trees together (unless there's only one result)
@@ -448,7 +455,7 @@ function wordTree() {
         var treeData = prepareTreeData(nodes,source,preOrPost,searchTermWidth); 
         
         // use d3 to bind all the svg g elements which have the 'node' class to the tree data
-        var d3NodeData = visualisation.selectAll("g.node")
+        var d3NodeData = visualisation.selectAll("g.node,g.buttonnode")
                 .data(treeData, function(d) { return d.id || (d.id = ++nodeIDCounter); });
 
         var dragBehaviour = defineDragBehaviour(preOrPost);
@@ -458,7 +465,7 @@ function wordTree() {
         drawNodes(d3NodeData,preOrPost,dragBehaviour,source,duration);
 
         // Use d3 to bind all the svg path elements which have the 'link' class to the tree link data
-        var d3LinkData = visualisation.selectAll("path.link")
+        var d3LinkData = visualisation.selectAll("path.link,path.buttonlink")
                 .data(d3TreeLayout.links(treeData), function(d) { return d.target.id; });
 
         drawLinks(d3LinkData,preOrPost,duration,source);
@@ -493,10 +500,10 @@ function wordTree() {
         // Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
         nodes.forEach(function(d) {
                 //If the node is deeper in the tree than maxDepth then delete it.
+                d.y = getYPosition(d,searchTermWidth,depthWidths,preOrPost);
                 if(d.depth > my.maxDepth()) {
-                    d.visible = false; 
+                    d.visible = false;              
                 } else {
-                    d.y = getYPosition(d,searchTermWidth,depthWidths,preOrPost);
                     d.visible = true;
                     if(d.depth==0) {
                         d.x = my.height()/2;
@@ -505,7 +512,7 @@ function wordTree() {
         });
         
         nodes = nodes.filter(function(d) {
-            return d.visible != false;
+            return (d.visible == true || d.isButton == true);
         });
 
         return nodes;
@@ -922,13 +929,15 @@ function wordTree() {
         
         //Add an svg group with the interactive behaviour and the appropriate position
         var onClickBehaviour = my.onClick();
+        var onButtonClickBehaviour = my.onButtonClick();
+       
         var mouseoverText = my.mouseoverText();
         
         var nodeEnter = nodes.enter().append("svg:g")
                 .attr("class", function(d) { return d.isButton ? "buttonnode" : "node";})
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
                 .on("mouseover", showLinkButton)
-                .attr("onmouseout", function() {return "hideDragAffordance()"; })
+                .on("mouseout", hideLinkButton)
                 .on("click", onClickBehaviour);
         
         //Add the circle
@@ -939,6 +948,17 @@ function wordTree() {
             .style("opacity", function(d) { return d.isButton ? 0 : 1; }); //hide the circle for buttons
         
         //Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
+        nodeEnter.append("svg:rect")
+            .attr("height",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) + 4 })
+            .attr("width",function(d) {return getTextWidth(d.cleanName,d.value) * 0.9})
+            .attr("x", function(d) { return (preOrPost == "pre") ? 0 : -getTextWidth(d.cleanName,d.value) * 0.9; })
+            .attr("y", function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) / -2 })
+            .attr("ry","3px")
+            .attr("rx","3px")
+            .attr("opacity",0)
+            .attr("id", function(d) { return preOrPost + "-" + d.id + "rect" ; })
+            .attr("class", function(d)  { return d.isButton ? "buttonnode" : "node";});
+           
         nodeEnter.append("svg:text")
                 .attr("x", function(d) { return (preOrPost == "pre") ? 10 : -10; })
                 .attr("dy", ".35em")
@@ -985,7 +1005,7 @@ function wordTree() {
 
         nodeUpdate.select("text")
                 .attr("font-size",function(d) { return (((Math.sqrt(d.value/ my.maxSize() *800)))* my.textSizeMultiplier() )+8;})
-            .style("fill-opacity", 1);
+                .style("fill-opacity", 1);
     }
 
     function removeOldNodes(nodes,duration,source) {
@@ -1016,6 +1036,8 @@ function wordTree() {
                     return diagonal({source: o, target: o});
                 })
                 .attr("stroke-width",function(d) { return (Math.sqrt(d.target.value/my.maxSize()*1000)); })
+                .on("mouseover", showLinkButton)
+                .on("mouseout", hideLinkButton)
                 .transition()
                     .duration(duration)
                     .attr("d", diagonal);
@@ -1042,29 +1064,52 @@ function wordTree() {
     }
     
     function showLinkButton(d){
-        var preOrPost = this.lastChild.id.substr(0,this.lastChild.id.indexOf("-"));
+        if(d.target) { d = d.target; } // If mouse is over a link then reset the d variable to point to a node
+        setLinkButtonVisibilityTo.call(this,true,d);
+    }
+    
+    function hideLinkButton(d) {
+        if(d.target) { d = d.target; }
+        setLinkButtonVisibilityTo.call(this,false,d);
+    }
+    
+    function setLinkButtonVisibilityTo(On,d) {
+        var id = this.id||this.lastChild.id;
+        var preOrPost = id.substr(0,id.indexOf("-"));
         var childButtonIds = [];
         findChildButtons(d,childButtonIds);
-        for (var i = 0 ; i < childButtonIds.length ; i++) {
-            $("#" + preOrPost + "-" + childButtonIds[i].toString()).attr("opacity",1);    
-        }
-
-    }
-
-    function findChildButtons(node,childButtonIds) {
-        for(var i = 0; i < node.children.length; i++) {
-            if (node.children[i].isButton) {
-                childButtonIds.push(node.children[i].id);
+        if(preOrPost + "-" + childButtonIds[0] == id) {
+            //the mouse is over the button - highlight the appropriate trail
+            if(On) {
+                highlightBothTrees(this.__data__);
             } else {
-                childButtonIds = findChildButtons(node.children[i],childButtonIds);
+                var root = getRoot(this.__data__);
+                var otherTreeData = getTreeData(getOther(preOrPost));
+                var otherTreeRoot = getRoot(otherTreeData);		
+                removeHighlight(root,preOrPost);
+                removeHighlight(otherTreeRoot,getOther(preOrPost));
             }
+        }
+        var opacity = On ? 1 : 0;
+        for (var i = 0 ; i < childButtonIds.length ; i++) {
+            $("#" + preOrPost + "-" + childButtonIds[i].toString()).attr("opacity",opacity);   
+            $("#" + preOrPost + "-" + childButtonIds[i].toString() + "rect").attr("opacity",opacity);        
+        }
+    }
+    
+    function findChildButtons(node,childButtonIds) {
+        if(node.isButton) {
+            childButtonIds.push(node.id);
+        }
+        for(var i = 0; i < node.children.length; i++) {
+            childButtonIds = findChildButtons(node.children[i],childButtonIds);
         }
         return childButtonIds;
     }
     
 }
 
-function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,stopChildren,useButtonNav) {
+function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,stopChildren,useButtonNav,buttonText,onButtonClick) {
     //covered by qUnit
     this.name;
     this.cleanName;
@@ -1074,17 +1119,20 @@ function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,s
     this.isLeaf = false;
     this.depth = depth;
     this.isButton = stopChildren;
-    
+    if(this.isButton) { this.onButtonClick = onButtonClick }    
     this.name = originalPhrase;
     this.cleanName = phrase[0];
     phrase.shift();
 
     if (phrase.length != 0 && depth < maxDepth) {
-        this.children.push(new DataTree(originalPhrase,phrase,value,matchingTermIndex,this.depth+1,maxDepth,false,useButtonNav));
+        this.children.push(new DataTree(originalPhrase,phrase,value,matchingTermIndex,this.depth+1,maxDepth,false,useButtonNav,buttonText,onButtonClick));
     } else {
         this.isLeaf = true;
+        var buttonTextString = [];
+        buttonTextString.push(buttonText(this));
+
         if ((depth == maxDepth || phrase.length==0) && !stopChildren && useButtonNav) {
-            this.children.push(new DataTree(originalPhrase,["Go"],value,matchingTermIndex,this.depth+1,this.depth+1,true,useButtonNav));
+            this.children.push(new DataTree(originalPhrase,buttonTextString,value,matchingTermIndex,this.depth+1,this.depth+1,true,useButtonNav,buttonText, onButtonClick));
         }
     }
    

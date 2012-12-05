@@ -11,7 +11,6 @@ body {
   stroke-width: 1.5px;
 }
 
-<<<<<<< HEAD
 line.link, path.link{
   fill: none;
   stroke: #ccc;
@@ -19,16 +18,23 @@ line.link, path.link{
   opacity:0.2;
 }
 
+rect.buttonnode{
+    stroke:#bbb;
+    rx:3px;
+    ry:3px;
+    fill:#eee;
+}
+
 text.link{
   font-weight:normal;
 }
 
 text.highlight {
-    font-weight:bold;
+    /* font-weight:bold; */
 }
 
 line.highlight, path.highlight{
-    stroke: red;
+    stroke: #FFA6A6;
 }
 
 .main 

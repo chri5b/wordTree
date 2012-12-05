@@ -50,13 +50,30 @@
                     .searchTerm(initialSearchTerm)
                     .width($(window).width())
                     .height($(window).height()-150)
-                    .maxResults(5)
+                    .maxResults(7)
                     .margins([10,10,10,10])
-                    .onClick(function(d) { updateTree(d.cleanName); })
+                    .onClick(function(d) { 
+                        if (d.isButton) {
+                            console.log("search for " + d.name); 
+                        } else {
+                            updateTree(d.cleanName); 
+                        }
+                    })
                     .onDragEnd(function(d) { })
                     .mouseoverText(function(d) { return d.name; })
                     .maxDepth(10)
-                    .useButtonNav(true);
+                    .useButtonNav(true)
+                    .maxDepth(5)
+                    .buttonText(function(d) { 
+                        var moreThanOne = d.value > 1;
+                        var text;
+                        if(moreThanOne) {
+                            text = "voir les " + d.value + " articles";
+                        } else {
+                            text = "voir l'article";
+                        }
+                        return text; 
+                    });
                 
                 function updateTree(searchTerm) {
                     //update the search input box with the new searchTerm (in case this is called from the onClick event of one of the nodes
