@@ -449,7 +449,8 @@ function wordTree() {
         // Compute the new tree layout.
         var nodes = d3TreeLayout.nodes(source).reverse();
         var rootNode = getRoot(nodes[0]);
-        searchTermWidth = getTextWidth(rootNode.cleanName,my.maxSize()); //How many pixels does the word searched for (in the middle of the tree) take up?
+	rootNode.value = my.maxSize(); //If the preTree has more data than the postTree, make sure the middle word is big enough.
+        searchTermWidth = getTextWidth(rootNode.cleanName,rootNode.value); //How many pixels does the word searched for (in the middle of the tree) take up?
         
         
         var treeData = prepareTreeData(nodes,source,preOrPost,searchTermWidth); 
@@ -492,11 +493,14 @@ function wordTree() {
                 depthWidths[d.depth] = widthForThisNode;
             }
         }); 
-        
-        spaceForTree = getSpaceForTree(searchTermWidth);
-        
-        depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree);
-        
+	
+	while(availableSpaceRatio > 1) {
+        	spaceForTree = getSpaceForTree(searchTermWidth);
+		var availableSpaceRatio = getAvailableSpaceRatio(depthWidths, spaceForTree);
+        	depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceRatio);
+		searchTermWidth = searchTermWidth/availableSpaceRatio;
+	} 
+
         // Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
         nodes.forEach(function(d) {
                 //If the node is deeper in the tree than maxDepth then delete it.
@@ -517,17 +521,22 @@ function wordTree() {
 
         return nodes;
     }
-    
-    function adjustDepthsForAvailableSpace(depthWidths, spaceForTree) {
-        //We need to try to fit the available content in the space available
-        //Given the maxDepth we need to plot, can we fit it in the available space?
-        var maxDepth = my.maxDepth()
+
+    function getAvailableSpaceRatio(depthWidths, spaceForTree) {
+        //What is the proportion of apace available to space needed? under 1 means we have more space than we need
+        //Over 1 means we don't have enough space
+	var maxDepth = my.maxDepth()
         var requiredSpace = 0;
         for (var i = 0; i < Math.min(maxDepth,depthWidths.length); i++) {
             requiredSpace += depthWidths[i];
         }
-        
         var availableSpaceUsed = requiredSpace/spaceForTree;
+ 	return availableSpaceUsed;
+    }	
+    
+    function adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceUsed) {
+        //We need to try to fit the available content in the space available
+        //Given the maxDepth we need to plot, can we fit it in the available space?
 
         if(availableSpaceUsed <= 1) {
             // If we have more space than we need, nothing needs to be done
@@ -949,13 +958,14 @@ function wordTree() {
         
         //Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
         nodeEnter.append("svg:rect")
-            .attr("height",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) + 4 })
+            .attr("height",function(d) { return getFontSize(d.value) + 4 })
             .attr("width",function(d) {return getTextWidth(d.cleanName,d.value) * 0.9})
             .attr("x", function(d) { return (preOrPost == "pre") ? 0 : -getTextWidth(d.cleanName,d.value) * 0.9; })
-            .attr("y", function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) / -2 })
+
+            .attr("y", function(d) { return getFontSize(d.value) / -2 })
             .attr("ry","3px")
             .attr("rx","3px")
-            .attr("opacity",0)
+            .attr("opacity",function(d) { return d.isButton ? 0.15 : 0 })
             .attr("id", function(d) { return preOrPost + "-" + d.id + "rect" ; })
             .attr("class", function(d)  { return d.isButton ? "buttonnode" : "node";});
            
@@ -963,8 +973,8 @@ function wordTree() {
                 .attr("x", function(d) { return (preOrPost == "pre") ? 10 : -10; })
                 .attr("dy", ".35em")
                 .attr("text-anchor", function(d) { return (preOrPost == "pre") ? "start" : "end"; })
-                .attr("font-size",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier())})
-                .attr("opacity",function(d) { return d.isButton ? 0 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
+                .attr("font-size",function(d) { return getFontSize(d.value)})
+                .attr("opacity",function(d) { return d.isButton ? 0.15 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
                 .attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
                 .text(function(d) { return getNodeText(d,preOrPost);})
                 .call(dragBehaviour)
@@ -1090,7 +1100,7 @@ function wordTree() {
                 removeHighlight(otherTreeRoot,getOther(preOrPost));
             }
         }
-        var opacity = On ? 1 : 0;
+        var opacity = On ? 1 : 0.15;
         for (var i = 0 ; i < childButtonIds.length ; i++) {
             $("#" + preOrPost + "-" + childButtonIds[i].toString()).attr("opacity",opacity);   
             $("#" + preOrPost + "-" + childButtonIds[i].toString() + "rect").attr("opacity",opacity);        
