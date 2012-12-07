@@ -1,4 +1,4 @@
-function wordTree() {
+function wordTree(testMode) {
   var margins = [20,20,20,20],
       width = $(window).width() - margins[1] - margins[3],
       height = $(window).height() - margins[0] - margins[2],
@@ -17,6 +17,7 @@ function wordTree() {
       onButtonClick = function(d) {},
       buttonText = function(d) { return ["Go"]; };
 
+  
   function my(selection) {
     selection.each(function(d,i) {
     
@@ -195,10 +196,10 @@ function wordTree() {
     return my
   }
 
-  return my;
 
 
-    function createTree(matchingTerms, searchTerm, callback) {
+
+  function createTree(matchingTerms, searchTerm, callback) {
         //partially covered in qUnit
         var postTree = [];
         var preTree = [];
@@ -300,17 +301,17 @@ function wordTree() {
                 }
             }
         }
-        matchingTermsWithDuplicates = matchingTerms.concat(newTerms);
+        var matchingTermsWithDuplicates = matchingTerms.concat(newTerms);
         
         for(var i = 0; i < matchingTermsWithDuplicates.length ; i++) {
             if(matchingTermsWithDuplicates[i]) {    
                 //If the last word isn't the search term then put it into pre-Tree
-                if(lastWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
+                if(firstWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
                     var preTerm = createTerm(matchingTermsWithDuplicates[i],i,searchTerm,false);
                     preTreeData.push(preTerm);
                 }
                 //If the first word isn't the search term, then put it into post-Tree 
-                if(firstWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
+                if(lastWordIsNotSearchTerm(matchingTermsWithDuplicates[i].cleanName,searchTerm)) {
                     var postTerm = createTerm(matchingTermsWithDuplicates[i],i,searchTerm,true);
                     postTreeData.push(postTerm);
                 } 
@@ -365,14 +366,15 @@ function wordTree() {
             return mergedTree;
         }
         return result[0];
+        
     }
 
-    function lastWordIsNotSearchTerm(wordArray,searchTerm) {
+    function firstWordIsNotSearchTerm(wordArray,searchTerm) {
         //covered by qUnit
         return wordIsNotSearchTerm(wordArray,searchTerm,0);
     }
 
-    function firstWordIsNotSearchTerm(wordArray,searchTerm) {
+    function lastWordIsNotSearchTerm(wordArray,searchTerm) {
         //covered by qUnit
         return wordIsNotSearchTerm(wordArray,searchTerm,wordArray.length-1);
     }
@@ -382,7 +384,7 @@ function wordTree() {
         var wordIndex = index;
         
         if (searchTerm) {
-            cleanedSearchTerm = removeTrailingPunctuation(searchTerm);
+            var cleanedSearchTerm = removeTrailingPunctuation(searchTerm);
             var word = removeTrailingPunctuation(wordArray[wordIndex]);
             if(word == cleanedSearchTerm) {
                 return false;
@@ -392,12 +394,17 @@ function wordTree() {
                 return false;
             }
             if(cleanedSearchTerm.charAt(cleanedSearchTerm.length-1) == 's') { //if the last letter of the search term is 's' then check to see if the word matches without the 's'
-                singlularCleanedSearchTerm = cleanedSearchTerm.substr(0,cleanedSearchTerm.length-1);
-                if(word == singlularCleanedSearchTerm) {
+                var singularCleanedSearchTerm = cleanedSearchTerm.substr(0,cleanedSearchTerm.length-1);
+                if(word == singularCleanedSearchTerm) {
+                    singularCleanedSearchTerm = undefined;
                     return false;
+                } else {
+                    singularCleanedSearchTerm = undefined;   
                 }
             }
         }
+        cleanedSearchTerm = undefined;
+
         return true;
     }
 
@@ -420,11 +427,10 @@ function wordTree() {
 
     function mergeTrees(tree1,tree2) {
         //covered by qunit
-        result = tree1;
         tree1.value = (+tree1.value) + (+tree2.value);
         tree1.matchingTermIndex = tree1.matchingTermIndex + "," + tree2.matchingTermIndex;
         for (var i=0;i<tree2.children.length;i++) {
-            commonChild = tree1.getChildIndex(tree2.children[i].cleanName)
+            var commonChild = tree1.getChildIndex(tree2.children[i].cleanName)
             if (commonChild != -1)
                 {
                     tree1.children[commonChild] = mergeTrees(tree1.children[commonChild],tree2.children[i]);
@@ -433,6 +439,7 @@ function wordTree() {
                 {
                     tree1.children.push(tree2.children[i]);
                 }
+            commonChild = undefined;
         }
         return tree1;
     }
@@ -449,7 +456,8 @@ function wordTree() {
         // Compute the new tree layout.
         var nodes = d3TreeLayout.nodes(source).reverse();
         var rootNode = getRoot(nodes[0]);
-        searchTermWidth = getTextWidth(rootNode.cleanName,my.maxSize()); //How many pixels does the word searched for (in the middle of the tree) take up?
+	rootNode.value = my.maxSize(); //If the preTree has more data than the postTree, make sure the middle word is big enough.
+        searchTermWidth = getTextWidth(rootNode.cleanName,rootNode.value); //How many pixels does the word searched for (in the middle of the tree) take up?
         
         
         var treeData = prepareTreeData(nodes,source,preOrPost,searchTermWidth); 
@@ -492,11 +500,14 @@ function wordTree() {
                 depthWidths[d.depth] = widthForThisNode;
             }
         }); 
-        
-        spaceForTree = getSpaceForTree(searchTermWidth);
-        
-        depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree);
-        
+	
+	while(availableSpaceRatio > 1) {
+        	spaceForTree = getSpaceForTree(searchTermWidth);
+		var availableSpaceRatio = getAvailableSpaceRatio(depthWidths, spaceForTree);
+        	depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceRatio);
+		searchTermWidth = searchTermWidth/availableSpaceRatio;
+	} 
+
         // Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
         nodes.forEach(function(d) {
                 //If the node is deeper in the tree than maxDepth then delete it.
@@ -517,17 +528,22 @@ function wordTree() {
 
         return nodes;
     }
-    
-    function adjustDepthsForAvailableSpace(depthWidths, spaceForTree) {
-        //We need to try to fit the available content in the space available
-        //Given the maxDepth we need to plot, can we fit it in the available space?
-        var maxDepth = my.maxDepth()
+
+    function getAvailableSpaceRatio(depthWidths, spaceForTree) {
+        //What is the proportion of apace available to space needed? under 1 means we have more space than we need
+        //Over 1 means we don't have enough space
+	var maxDepth = my.maxDepth()
         var requiredSpace = 0;
         for (var i = 0; i < Math.min(maxDepth,depthWidths.length); i++) {
             requiredSpace += depthWidths[i];
         }
-        
         var availableSpaceUsed = requiredSpace/spaceForTree;
+ 	return availableSpaceUsed;
+    }	
+    
+    function adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceUsed) {
+        //We need to try to fit the available content in the space available
+        //Given the maxDepth we need to plot, can we fit it in the available space?
 
         if(availableSpaceUsed <= 1) {
             // If we have more space than we need, nothing needs to be done
@@ -949,13 +965,14 @@ function wordTree() {
         
         //Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
         nodeEnter.append("svg:rect")
-            .attr("height",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) + 4 })
+            .attr("height",function(d) { return getFontSize(d.value) + 4 })
             .attr("width",function(d) {return getTextWidth(d.cleanName,d.value) * 0.9})
             .attr("x", function(d) { return (preOrPost == "pre") ? 0 : -getTextWidth(d.cleanName,d.value) * 0.9; })
-            .attr("y", function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier()) / -2 })
+
+            .attr("y", function(d) { return getFontSize(d.value) / -2 })
             .attr("ry","3px")
             .attr("rx","3px")
-            .attr("opacity",0)
+            .attr("opacity",function(d) { return d.isButton ? 0.15 : 0 })
             .attr("id", function(d) { return preOrPost + "-" + d.id + "rect" ; })
             .attr("class", function(d)  { return d.isButton ? "buttonnode" : "node";});
            
@@ -963,8 +980,8 @@ function wordTree() {
                 .attr("x", function(d) { return (preOrPost == "pre") ? 10 : -10; })
                 .attr("dy", ".35em")
                 .attr("text-anchor", function(d) { return (preOrPost == "pre") ? "start" : "end"; })
-                .attr("font-size",function(d) { return getFontSize(d.value,my.maxSize(),my.textSizeMultiplier())})
-                .attr("opacity",function(d) { return d.isButton ? 0 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
+                .attr("font-size",function(d) { return getFontSize(d.value)})
+                .attr("opacity",function(d) { return d.isButton ? 0.15 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
                 .attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
                 .text(function(d) { return getNodeText(d,preOrPost);})
                 .call(dragBehaviour)
@@ -1090,7 +1107,7 @@ function wordTree() {
                 removeHighlight(otherTreeRoot,getOther(preOrPost));
             }
         }
-        var opacity = On ? 1 : 0;
+        var opacity = On ? 1 : 0.15;
         for (var i = 0 ; i < childButtonIds.length ; i++) {
             $("#" + preOrPost + "-" + childButtonIds[i].toString()).attr("opacity",opacity);   
             $("#" + preOrPost + "-" + childButtonIds[i].toString() + "rect").attr("opacity",opacity);        
@@ -1107,7 +1124,32 @@ function wordTree() {
         return childButtonIds;
     }
     
+    var userDragging = false;
+
+    var nodeIDCounter = 0;
+
+    var diagonal = d3.svg.diagonal()
+        .projection(function(d) { return [d.y, d.x]; });
+    
+    if(!testMode) {
+        return my;
+    } else {
+        return {
+            my:my,
+            lastWordIsNotSearchTerm:lastWordIsNotSearchTerm,
+            firstWordIsNotSearchTerm:firstWordIsNotSearchTerm,
+            removeTrailingPunctuation:removeTrailingPunctuation,
+            pruneTerm:pruneTerm,
+            mergeTrees:mergeTrees,
+            nestTreeData:nestTreeData,
+            createTerm:createTerm,
+            processTreeData:processTreeData,
+            handleSpacesInMultiWordSearchTerm:handleSpacesInMultiWordSearchTerm,
+            createTree:createTree
+        }
+    }
 }
+
 
 function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,stopChildren,useButtonNav,buttonText,onButtonClick) {
     //covered by qUnit
@@ -1140,7 +1182,7 @@ function DataTree(originalPhrase,phrase,value,matchingTermIndex,depth,maxDepth,s
 
 DataTree.prototype.getChildIndex = function(Name) {
     //covered by qUnit
-    result = -1;
+    var result = -1;
     for(var i=0;i<this.children.length;i++)
     {
         if (this.children[i].cleanName == Name) {
@@ -1161,7 +1203,7 @@ DataTree.prototype.getChildIndex = function(Name) {
         }
     }
     return result;
-};
+}
 
 function hideDragAffordance() {
         if(!userDragging) {
@@ -1220,13 +1262,3 @@ function showDragAffordance(id, x, y, preOrPost) {
                     .attr("opacity",1);	
         }
     }
-
-
-    
-var userDragging = false;
-
-var nodeIDCounter = 0;
-
-var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });
-        

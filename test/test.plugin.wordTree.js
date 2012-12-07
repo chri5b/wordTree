@@ -3,22 +3,29 @@
 <head>
 	<link rel="stylesheet" href="qunit-1.10.0.css" />
 	<script src="qunit-1.10.0.js"></script>
-	<script src="../client/treeData.js"></script>
+    <script src="../client/d3.js"></script>
+    <script src="../client/d3.layout.js"></script>
+    <script src="../client/jQuery-1.8.1.js"></script>
+	<script src="../plugin/wordTree.js"></script>
 	<script>
+    var subject = wordTree(true);
+    
 	function testWordIsNotSearchTerm(first,wordArray) {
+        var testableWordTree = wordTree(true);
+        var myFunction;
 		if(first == true) {
-			myFunction = firstWordIsNotSearchTerm;
+			myFunction = testableWordTree.firstWordIsNotSearchTerm;
 		} else {
-			myFunction = lastWordIsNotSearchTerm;
+			myFunction = testableWordTree.lastWordIsNotSearchTerm;
 		}
 		var singleWordArray = ["words"];
-		equal(myFunction(wordArray,"balloon"),false,"first/last word is search term");
+		equal(myFunction(wordArray,"balloon"),false,"first/last word is search term function should return false");
 		equal(myFunction(wordArray,"balloons"),false,"search term is plural form of first/last word");
 		equal(myFunction(wordArray,"Balloon"),false,"first/last word has different capitalisation");
 		equal(myFunction(wordArray,"balloon,"),false,"search term has trailing punctuation");
 		equal(myFunction(wordArray,"moon"),true,"search term is in wordArray but not first/last word");
 		equal(myFunction(wordArray,""),true,"search term is empty string");
-		equal(myFunction(wordArray,"the"),true,"search term is first word");
+		equal(myFunction(wordArray,"the"),true,"search term is first/last word");
 		equal(myFunction(wordArray,null),true,"search term is null");
 		equal(myFunction(singleWordArray,"word"),false,"word array has one word, word is singular form of search term");
 		equal(myFunction(singleWordArray,"words"),false,"word array has one word");
@@ -27,7 +34,7 @@
 	
 	test("lastWordIsNotSearchTerm test", function() {
 		var wordArray = ["the","moon","is","a","balloon"];
-		testWordIsNotSearchTerm(false,wordArray);		
+		testWordIsNotSearchTerm(false,wordArray);
 	});
 	
 	test("firstWordIsNotSearchTerm test", function() {
@@ -36,18 +43,18 @@
 	});
 	
 	test("removeTrailingPunctuation test", function() {
-		equal(removeTrailingPunctuation("hello"),"hello","don't alter word with no trailing punctuation");
-		equal(removeTrailingPunctuation("Hello"),"hello","to lower case");	
-		equal(removeTrailingPunctuation("hello,"),"hello","remove trailing comma");		
-		equal(removeTrailingPunctuation("hello."),"hello","remove trailing period");	
-		equal(removeTrailingPunctuation("hello:"),"hello","remove trailing colon");	
-		equal(removeTrailingPunctuation("hello;"),"hello","remove trailing semicolon");	
-		equal(removeTrailingPunctuation("hello'"),"hello","remove trailing single quote");	
-		equal(removeTrailingPunctuation("hello?"),"hello","remove trailing question mark");	
-		equal(removeTrailingPunctuation("hello!"),"hello","remove trailing exclamation");
-		equal(removeTrailingPunctuation("hello,,"),"hello","remove multiple trailing punctuation marks");			
-		equal(removeTrailingPunctuation(""),"","empty string");
-		equal(removeTrailingPunctuation(null),null,"null input");	
+		equal(subject.removeTrailingPunctuation("hello"),"hello","don't alter word with no trailing punctuation");
+		equal(subject.removeTrailingPunctuation("Hello"),"hello","to lower case");	
+		equal(subject.removeTrailingPunctuation("hello,"),"hello","remove trailing comma");		
+		equal(subject.removeTrailingPunctuation("hello."),"hello","remove trailing period");	
+		equal(subject.removeTrailingPunctuation("hello:"),"hello","remove trailing colon");	
+		equal(subject.removeTrailingPunctuation("hello;"),"hello","remove trailing semicolon");	
+		equal(subject.removeTrailingPunctuation("hello'"),"hello","remove trailing single quote");	
+		equal(subject.removeTrailingPunctuation("hello?"),"hello","remove trailing question mark");	
+		equal(subject.removeTrailingPunctuation("hello!"),"hello","remove trailing exclamation");
+		equal(subject.removeTrailingPunctuation("hello,,"),"hello","remove multiple trailing punctuation marks");			
+		equal(subject.removeTrailingPunctuation(""),"","empty string");
+		equal(subject.removeTrailingPunctuation(null),null,"null input");	
 	});
 	
 	test("prune term", function() {
@@ -56,22 +63,11 @@
 			test2Array = wordArray.slice(), 
 			test3Array = wordArray.slice(),
 			test4Array = wordArray.slice(), 
-			test5Array = wordArray.slice()
-			test6Array = wordArray.slice();
+			test5Array = wordArray.slice();
 		
 		var singleWordArray = ["balloon"];
-		deepEqual(pruneTerm(test1Array,"is"),["is","moon","the"],"strip initial words if they don't match exactly");
-		deepEqual(pruneTerm(test2Array,"balloon"),["balloon","a","is","moon","the"],"do nothing if first word matches");
-		deepEqual(pruneTerm(test3Array,"foo"),[],"return nothing if nothing matches");
-		deepEqual(pruneTerm(singleWordArray,"balloon"),["balloon"],"single word array which matches");
-		deepEqual(pruneTerm(singleWordArray,"foo"),[],"return nothing if nothing matches, one word");
-		deepEqual(pruneTerm(test4Array,"Balloon"),["balloon","a","is","moon","the"],"Match different capitalisation");
-		deepEqual(pruneTerm(test5Array,"balloon,"),["balloon","a","is","moon","the"],"Match with trailing punctuation");
-		deepEqual(pruneTerm(test6Array,"balloons"),["balloon","a","is","moon","the"],"Match plural form");
-		
-
-
-	
+		deepEqual(subject.pruneTerm(test1Array,2),["is","moon","the"],"strip initial words if they don't match exactly");
+		deepEqual(subject.pruneTerm(test2Array,0),["balloon","a","is","moon","the"],"do nothing if first word matches");
 	});
     
     test("create dataTree", function() {
@@ -82,6 +78,8 @@
         var phrase4 = "some 1 numeric values";
         var phrase5 = "word";
         var phrase6 = "Tennis ball";
+        
+        var buttonText = function(d) {return d.name;}
     
         var cleanPhrase1 = ["Tennis","ball"];
         var cleanPhrase2 = ["lots","and","lots","and","lots","and","lots","of","words","in","the","phrase"];
@@ -90,18 +88,18 @@
         var cleanPhrase5 = ["word"];
         var cleanPhrase6 = ["Tennis","ball"];
 
-        var actualResult1 = new DataTree(phrase1,cleanPhrase1,1,0);
+        var actualResult1 = new DataTree(phrase1,cleanPhrase1,1,0,0,1,false,false,buttonText,null);
         testDataTree(actualResult1,"Tennis",1,1,"ball",1,0,"basic test");
-        var actualResult2 = new DataTree(phrase2,cleanPhrase2,1,0);
+        var actualResult2 = new DataTree(phrase2,cleanPhrase2,1,0,0,15,false,false,buttonText,null);
         testDataTree(actualResult2,"lots",1,1,"and",1,0,"long phrase");
         equal(actualResult2.children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].children[0].cleanName,"phrase","long phrase : last word");
-        var actualResult3 = new DataTree(phrase3,cleanPhrase3,1,0);
+        var actualResult3 = new DataTree(phrase3,cleanPhrase3,1,0,0,1,false,false,buttonText,null);
         testDataTree(actualResult3,"some",1,1,null,1,0,"null value");
-        var actualResult4 = new DataTree(phrase4,cleanPhrase4,1,0);
+        var actualResult4 = new DataTree(phrase4,cleanPhrase4,1,0,0,1,false,false,buttonText,null);
         testDataTree(actualResult4,"some",1,1,"1",1,0,"numeric value");
-        var actualResult5 = new DataTree(phrase5,cleanPhrase5,1,0);
+        var actualResult5 = new DataTree(phrase5,cleanPhrase5,1,0,0,1,false,false,buttonText,null);
         testDataTree(actualResult5,"word",0,1,1,0,undefined,"one word phrase");
-        var actualResult6 = new DataTree(phrase6,cleanPhrase6,9283,100);
+        var actualResult6 = new DataTree(phrase6,cleanPhrase6,9283,100,0,1,false,false,buttonText,null);
         testDataTree(actualResult6,"Tennis",1,9283,"ball",9283,100,"value and matchingTermIndex");
     });
     
@@ -127,14 +125,14 @@
         //      ball ("0")
         //      racket ("1,2")
         //          strings ("2")
-    
-        var tree1 = new DataTree("tennis ball",["tennis","ball"],1,0);
-        var tree2 = new DataTree("tennis racket",["tennis","racket"],1,1);
-        var mergedTrees = mergeTrees(tree1,tree2);
+        var buttonText = function(d) {return d.name;}
+        var tree1 = new DataTree("tennis ball",["tennis","ball"],1,0,0,1,false,false,buttonText,null);
+        var tree2 = new DataTree("tennis racket",["tennis","racket"],1,1,0,1,false,false,buttonText,null);
+        var mergedTrees = subject.mergeTrees(tree1,tree2);
         testDataTree(mergedTrees,"tennis",2,2,"ball",1,0,"mergedTree");
         strictEqual(mergedTrees.children[1].cleanName,"racket","second child name");   
-        var tree3 = new DataTree("tennis racket strings",["tennis","racket","strings"],20,2);
-        var secondGenerationMerge = mergeTrees(mergedTrees,tree3);
+        var tree3 = new DataTree("tennis racket strings",["tennis","racket","strings"],20,2,0,4,false,false,buttonText,null);
+        var secondGenerationMerge = subject.mergeTrees(mergedTrees,tree3);
         testDataTree(secondGenerationMerge,"tennis",2,22,"ball",1,0,"second generation merged tree");
         strictEqual(secondGenerationMerge.children[1].cleanName,"racket","second child name"); 
         strictEqual(secondGenerationMerge.children[1].children[0].cleanName,"strings","grandchild name");
@@ -145,11 +143,12 @@
     });
     
     test("DataTree.getChildIndex", function () {
-        var tree1 = new DataTree("tennis ball",["tennis","ball"],1,0);
-        var tree2 = new DataTree("tennis racket",["tennis","racket"],1,1);
-        var mergedTrees = mergeTrees(tree1,tree2);
-        var tree3 = new DataTree("tennis racket strings",["tennis","racket","strings"],20,2);
-        var secondGenerationMerge = mergeTrees(mergedTrees,tree3);
+        var buttonText = function(d) {return d.name;}
+        var tree1 = new DataTree("tennis ball",["tennis","ball"],1,0,0,1,false,false,buttonText,null);
+        var tree2 = new DataTree("tennis racket",["tennis","racket"],1,1,0,1,false,false,buttonText,null);
+        var mergedTrees = subject.mergeTrees(tree1,tree2);
+        var tree3 = new DataTree("tennis racket strings",["tennis","racket","strings"],20,2,0,4,false,false,buttonText,null);
+        var secondGenerationMerge = subject.mergeTrees(mergedTrees,tree3);
         
         strictEqual(tree1.getChildIndex("ball"),0,"simple positive case");
         strictEqual(tree1.getChildIndex("foo"),-1,"simple negative case");
@@ -167,13 +166,13 @@
                 {"name":"Tennis umpire seat","cleanName":["tennis","umpire","seat"],"value":7,"matchingTermIndex":4},
                 {"name":"tennis score ","cleanName":["tennis","score",""],"value":13,"matchingTermIndex":5}                
             ];
-        testDataTree(nestTreeData(inputData,"tennis"),"tennis",4,47,"ball",6,"0,3","nestTreeData positive case");
+        testDataTree(subject.nestTreeData(inputData,"tennis"),"tennis",4,47,"ball",6,"0,3","nestTreeData positive case");
         
         var inputData1 = [{"cleanName":["tennis","ball"],"value":1,"matchingTermIndex":0}];
-        testDataTree(nestTreeData(inputData1,"tennis"),"tennis",1,1,"ball",1,"0","nestTreeData single term");
+        testDataTree(subject.nestTreeData(inputData1,"tennis"),"tennis",1,1,"ball",1,"0","nestTreeData single term");
         
         var inputData2 = [{"cleanName":["tennis"],"value":1,"matchingTermIndex":0}];
-        testDataTree(nestTreeData(inputData2,"tennis"),"tennis",0,1,undefined,undefined,undefined,"nestTreeData single word term");
+        testDataTree(subject.nestTreeData(inputData2,"tennis"),"tennis",0,1,undefined,undefined,undefined,"nestTreeData single word term");
     });
     
     test("create term", function() {
@@ -186,16 +185,16 @@
         var searchTerm = "tennis";
         var isPost = false;
         
-        var actualResult = createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost);
+        var actualResult = subject.createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost);
       
-        equal(actualResult.cleanName[0],"tennis","pre: first word in name");
-        equal(actualResult.cleanName[1],"ball","pre: second word in name");
+        equal(actualResult.cleanName[0],"ball","pre: first word in name");
+        equal(actualResult.cleanName[1],"tennis","pre: second word in name");
         equal(actualResult.value,1,"pre: value");
         equal(actualResult.matchingTermIndex,"0","pre: matchingTermIndex");
         
-        var actualResult1 = createTerm(matchingTerm,matchingTermIndex,searchTerm,true);
-        equal(actualResult1.cleanName[0],"tennis","post: first word in name");
-        equal(actualResult1.cleanName[1],"bouncy","post: second word in name");
+        var actualResult1 = subject.createTerm(matchingTerm,matchingTermIndex,searchTerm,true);
+        equal(actualResult1.cleanName[0],"bouncy","post: first word in name");
+        equal(actualResult1.cleanName[1],"tennis","post: second word in name");
         equal(actualResult1.value,1,"post: value");
         equal(actualResult1.matchingTermIndex,"0","post: matchingTermIndex");
     });
@@ -214,8 +213,8 @@
                 {"name":"bouncy, tennis ball",value:13},
                 {"name":"tennis  racket.",value:7}
             ];
-        var actualResult1 = processTreeData(matchingTerms1,searchTerm,postTreeData1,preTreeData1);
-        var actualResult2 = processTreeData(matchingTerms2,searchTerm,postTreeData2,preTreeData2);
+        var actualResult1 = subject.processTreeData(matchingTerms1,searchTerm,postTreeData1,preTreeData1);
+        var actualResult2 = subject.processTreeData(matchingTerms2,searchTerm,postTreeData2,preTreeData2);
         
         equal(postTreeData1[0].cleanName[0],"tennis","base case: post tree root name");
         equal(postTreeData1[1].cleanName[1],"ball","base case: post tree other name");
@@ -242,7 +241,7 @@
             {"name":"tennis ball"}
         ];
         var actualResult = 
-        handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms);
+        subject.handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms);
         
         deepEqual(matchingTerms[0],{"name":"There was once a Tennis_ball from Tipperary"},"basic case");
         deepEqual(matchingTerms[1],{"name":"Tennis_ball, Tennis_ball, how fair thou art"},"multiple examples of search term");
@@ -333,7 +332,7 @@
             equal(postTree.children[0].value,expectedPostTree.children[0].value, "first child value");
             equal(postTree.children[0].matchingTermIndex,expectedPostTree.children[0].matchingTermIndex, "first child matchingTermIndex");
         }
-        createTree(matchingTerms,searchTerm,myCallback);
+        subject.createTree(matchingTerms,searchTerm,myCallback);
         }
         
         createTreeTestHelper(matchingTerms1,searchTerm1,expectedPostTree1);
