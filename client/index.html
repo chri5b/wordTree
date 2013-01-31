@@ -90,6 +90,10 @@
                     
                     //redraw the tree when the data returns
                     request.done(function (data) {
+
+                        tree.preTreeData(data.preTree)
+                            .postTreeData(data.postTree);
+
                         d3.select("#results")
                             .datum(data)
                             .call(tree);

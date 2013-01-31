@@ -245,14 +245,22 @@ function createTree(matchingTerms, searchTerm, minValue, callback) {
 }
 
 function removeNodesBelowMinValue(tree,minValue) {
-    if(tree.value > minValue) {
-        for(var i = 0 ; i < tree.children.length ; i++) {
-            tree.children[i] = removeNodesBelowMinValue(tree.children[i],minValue);
+    if(tree) {
+        if(tree.value > minValue) {
+            for(var i = 0 ; i < tree.children.length ; i++) {
+                tree.children[i] = removeNodesBelowMinValue(tree.children[i],minValue);
+            }
+            tree.children = tree.children.filter(function(element,index,array) {
+                return element != null;
+            })
+
+        } else {
+            return null;
         }
+        return tree;
     } else {
         return null;
     }
-    return tree;
 }
 
 function createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost) {
