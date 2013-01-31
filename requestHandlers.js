@@ -10,8 +10,10 @@ var querystring = require("querystring");
 var dateFormat = require("dateformat");
 //Project Dependencies
 var keyWords = require("./keyWords");
+var treeProcessor = require("./treeProcessor");
 //Config parameters
-var maxKeyWords = 100;
+var maxKeyWords = 10000;
+var minValue = 2;
 
 function staticFiles(pathname, response) {
 	util.log("Request handler 'staticFiles' was called.");
@@ -25,7 +27,7 @@ function staticFiles(pathname, response) {
 	var extname = path.extname(filePath);
 	var dictTypes = {
 		'.js': 'text/javascript',
-		'.css': 'text/css',
+		'.css': 'text/css'
 	}
 
 	var contentType = dictTypes[extname] || 'text/html';
@@ -48,7 +50,7 @@ function staticFiles(pathname, response) {
 		}
 		else {
 			response.writeHead(404);
-			response.end();;
+			response.end();
 		}
 	});
 		
@@ -81,9 +83,22 @@ function keyWordSearch(pathname, response) {
 						filteredKeyWords.length = maxKeyWords;
 					}
 				}
-				response.writeHead(200, {"Content-Type": "text/plain"});
-				response.write(JSON.stringify(filteredKeyWords,null,2));
-				response.end();
+                treeProcessor.createTree(filteredKeyWords,searchTerm,minValue,function(error,errorText,postTreeData,preTreeData,d) {
+                    if(error) {
+                        response.writeHead(500,{"Content-Type": "text/plain"});
+                        response.write(errorText);
+                        response.end();
+                    } else
+                    {
+                        var responseData = {};
+                        responseData.matchingTerms = extractName(d);
+                        responseData.preTree = preTreeData;
+                        responseData.postTree = postTreeData;
+                        response.writeHead(200, {"Content-Type": "text/plain"});
+                        response.write(JSON.stringify(responseData,null,2));
+                        response.end();
+                    }
+                });
 			});
 		});
     }
@@ -119,6 +134,13 @@ function getDateFormat(mins) {
 	return dateFormat(soon, "ddd, dd mmm yyyy HH:MM:ss 'GMT'");
 }
 
+function extractName(d) {
+    var nameArray = [];
+    for(var i = 0; i< d.length ; i ++) {
+        nameArray.push(d[i].name);
+    }
+    return nameArray;
+}
 
 exports.staticFiles = staticFiles;
 exports.keyWordSearch = keyWordSearch;

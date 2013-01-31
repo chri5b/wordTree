@@ -1,0 +1,64 @@
+/*
+input:
+    one fine day
+    one fine day in may
+    one fine cannibal
+    one green bucket
+
+output:
+ */
+
+
+{
+    "word":"one",
+    "number":4,
+    "hash":{"fine":0,"green":1},
+    "children": [
+        {
+            "word":"fine",
+            "number":3,
+            "hash":{"day":0,"cannibal":1},
+            "children": [
+                {
+                    "word":"day",
+                    "number":2,
+                    "hash":{"in":0},
+                    "children":[
+                        {
+                            "word":"in",
+                            "number":1,
+                            "hash":{"may":0},
+                            "children":[
+                                {
+                                    "word":"may",
+                                    "number":1,
+                                    "hash":{},
+                                    "children":[]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "word":"cannibal",
+                    "number":1,
+                    "hash":{},
+                    "children":[]
+                }
+            ]
+        },
+        {
+            "word":"green",
+            "number":1,
+            "hash":{"bucket":0},
+            "children": [
+                {
+                    "word":"bucket",
+                    "number":1,
+                    "hash":{},
+                    "children":[]
+                }
+            ]
+        }
+    ]
+}
