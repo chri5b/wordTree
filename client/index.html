@@ -4,6 +4,7 @@
         <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
         <title>Word Tree</title>
         <link type="text/css" rel="stylesheet" href="style.css"/>
+        <link type="text/css" rel="stylesheet" href="bootstrap.css"/>
         <![if (IE 9)|(!IE)]> 
         <script type="text/javascript" src="jQuery-1.8.1.js" ></script>
         <script type="text/javascript" src="d3.js"></script>
@@ -29,7 +30,12 @@
         <input id="searchButton" type="button" value="go" />
         <div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
         </div>
-        <div id="results"></div>
+            <div class="row-fluid">
+                <div class="span12" id="results"></div>
+            </div>
+            <div class="row-fluid">
+                <div class="span6" id="results2"></div>
+            </div>
         <script type="text/javascript">
             $(document).ready(function() {
                 //If someone hits enter then act as if they clicked the search button
@@ -43,13 +49,13 @@
                     updateTree($("#search").val());
                 });
                 
-                var initialSearchTerm = "scythe";
+                var initialSearchTerm = "his";
                          
                 //configure the tree visualisation
                 var tree = wordTree()
                     .searchTerm(initialSearchTerm)
                     .width($(window).width())
-                    .height($(window).height()-150)
+                    .height($(window).height()/2-50)
                     .maxResults(50)
                     .margins([10,10,10,10])
                     .onClick(function(d) { 
@@ -74,6 +80,35 @@
                         }
                         return text; 
                     });
+
+                var tree2 = wordTree()
+                    .searchTerm(initialSearchTerm)
+                    .width($(window).width())
+                    .height($(window).height()/2-50)
+                    .maxResults(50)
+                    .margins([10,10,10,10])
+                    .onClick(function(d) {
+                        if (d.isButton) {
+                            console.log("search for " + d.name);
+                        } else {
+                            updateTree(d.cleanName);
+                        }
+                    })
+                    .onDragEnd(function(d) { })
+                    .mouseoverText(function(d) { return d.name; })
+                    .maxDepth(10)
+                    .useButtonNav(true)
+                    .maxDepth(5)
+                    .buttonText(function(d) {
+                        var moreThanOne = d.value > 1;
+                        var text;
+                        if(moreThanOne) {
+                            text = "voir les " + d.value + " articles";
+                        } else {
+                            text = "voir l'article";
+                        }
+                        return text;
+                    });
                 
                 function updateTree(searchTerm) {
                     //update the search input box with the new searchTerm (in case this is called from the onClick event of one of the nodes
@@ -81,22 +116,37 @@
                     $("#selectedText").empty();
                     
                     //Request the data
-                    var request = getRequest(searchTerm)
+                    var request = getRequest(searchTerm,"copperfield");
+                    var request2 = getRequest(searchTerm,"ulysses");
                     
                     //Update the visualisation settings
                     tree.searchTerm(searchTerm)
-                        .width($(window).width())
-                        .height($(window).height()-100);
+                            .width($(window).width())
+                            .height($(window).height()/2-50);
+
+                    tree2.searchTerm(searchTerm)
+                            .width($(window).width())
+                            .height($(window).height()/2-50);
                     
                     //redraw the tree when the data returns
                     request.done(function (data) {
 
                         tree.preTreeData(data.preTree)
-                            .postTreeData(data.postTree);
+                                .postTreeData(data.postTree);
 
                         d3.select("#results")
-                            .datum(data)
-                            .call(tree);
+                                .datum(data)
+                                .call(tree);
+                    });
+
+                    request2.done(function (data) {
+
+                        tree2.preTreeData(data.preTree)
+                                .postTreeData(data.postTree);
+
+                        d3.select("#results2")
+                                .datum(data)
+                                .call(tree2);
                     });
                     
                     request.fail(function(errorData, textStatus) {
@@ -110,15 +160,33 @@
                             $("#errorDiv").html(errorText).show().fadeOut(2000);	
                         }
                     });
+
+                    request2.fail(function(errorData, textStatus) {
+                        window.console && console.log(errorData);
+                        if (errorData.status==404) {
+                            errorText = "There is no content which matches your search";
+                            $("#errorDiv").html(errorText).show().fadeOut(2000);
+                        }
+                        else {
+                            errorText = "An error occurred on the server";
+                            $("#errorDiv").html(errorText).show().fadeOut(2000);
+                        }
+                    });
                 }
                 
                 $(window).resize(function() {
                     //If we resize the window, redraw the tree without requesting new data.
                     tree
-                        .width($(window).width())
-                        .height($(window).height()-150);         
+                        .width($(window).width()/2)
+                        .height($(window).height()-50);
                     d3.select("#results")
-                        .call(tree);  
+                        .call(tree);
+
+                    tree2
+                        .width($(window).width()/2)
+                        .height($(window).height()-50);
+                    d3.select("#results")
+                        .call(tree2);
                 });   
             });
         </script>

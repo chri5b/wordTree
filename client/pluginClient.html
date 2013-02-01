@@ -21,7 +21,7 @@
                     .valueAccessor(function(d) {return d.value;})
                     .onClick(function(d) { updateTree(d.cleanName); });
                    
-                var request = getRequest(initialSearchTerm)
+                var request = getRequest(initialSearchTerm);
 
                 request.done(function(data) {
                     d3.select("#target")
@@ -31,7 +31,7 @@
                 
                 
                 function updateTree(searchTerm) {
-                    var request = getRequest(searchTerm)
+                    var request = getRequest(searchTerm);
                     
                     tree.searchTerm(searchTerm);
                     

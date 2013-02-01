@@ -1,13 +1,15 @@
 ﻿var maxKeyWords = 40;
 
-function getRequest(initialSearchTerm) {
-    var request = $.ajax({
+function getRequest(initialSearchTerm,book) {
+    return $.ajax({
           url: "/keyWord?",
           type: "GET",
-          data: {"q":initialSearchTerm},
+          data: {
+              "q":initialSearchTerm,
+              "book":book
+          },
           dataType: "json"
         });
-    return request
 }
 
 // parseUri 1.2.2

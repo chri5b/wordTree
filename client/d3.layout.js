@@ -777,7 +777,7 @@ d3.layout.stack = function() {
   };
 
   return stack;
-}
+};
 
 function d3_layout_stackX(d) {
   return d.x;

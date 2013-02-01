@@ -36,7 +36,7 @@ function handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms){
     var originalSearchTerm = searchTerm;
     searchTerm = searchTerm.replace(/ /g,'_');
 
-    var re = new RegExp(originalSearchTerm,"gi")
+    var re = new RegExp(originalSearchTerm,"gi");
     
     for(var i=0;i<matchingTerms.length;i++) {
         if(matchingTerms[i]) {
@@ -84,7 +84,7 @@ function createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost) {
     //covered by qUnit
     //assumes cleaned and lowercase terms
     var newTerm = {};
-    newTerm.name=matchingTerm.name
+    newTerm.name=matchingTerm.name;
     newTerm.cleanName =matchingTerm.cleanName.slice(0);
     if(isPost) {newTerm.cleanName.reverse();}
     newTerm.cleanName= pruneTerm(newTerm.cleanName,searchTerm);
@@ -162,7 +162,7 @@ function wordIsNotSearchTerm(wordArray,searchTerm,first) {
 	}
 	
 	if (searchTerm) {
-		cleanedSearchTerm = removeTrailingPunctuation(searchTerm)
+		cleanedSearchTerm = removeTrailingPunctuation(searchTerm);
 		var word = removeTrailingPunctuation(wordArray[wordIndex]);
 		if(word == cleanedSearchTerm) {
 			return false;
@@ -207,7 +207,7 @@ function mergeTrees(tree1,tree2) {
     tree1.value = tree1.value + tree2.value;
     tree1.matchingTermIndex = tree1.matchingTermIndex + "," + tree2.matchingTermIndex;
     for (var i=0;i<tree2.children.length;i++) {
-        commonChild = tree1.getChildIndex(tree2.children[i].cleanName)
+        commonChild = tree1.getChildIndex(tree2.children[i].cleanName);
         if (commonChild != -1)
             {
                 tree1.children[commonChild] = mergeTrees(tree1.children[commonChild],tree2.children[i]);

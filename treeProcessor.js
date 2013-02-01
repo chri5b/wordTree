@@ -26,7 +26,7 @@ function mergeTrees(tree1,tree2) {
     tree1.value = (+tree1.value) + (+tree2.value);
     tree1.matchingTermIndex = tree1.matchingTermIndex + "," + tree2.matchingTermIndex;
     for (var i=0;i<tree2.children.length;i++) {
-        var commonChild = tree1.getChildIndex(tree2.children[i].cleanName)
+        var commonChild = tree1.getChildIndex(tree2.children[i].cleanName);
         if (commonChild != -1)
         {
             tree1.children[commonChild] = mergeTrees(tree1.children[commonChild],tree2.children[i]);
@@ -92,7 +92,7 @@ DataTree.prototype.getChildIndex = function(Name) {
         }
     }
     return result;
-}
+};
 
 function processTreeData(matchingTerms,searchTerm,postTreeData,preTreeData) {
     //covered in qUnit
@@ -123,7 +123,7 @@ function processTreeData(matchingTerms,searchTerm,postTreeData,preTreeData) {
                     matchingTerms[i].searchTermIndex = foundSearchTerms[j];
                 } else {
                     //If the search term occurs multiple times in a single matching term then make a new term and index the appropriate search term.
-                    var newTerm = {}
+                    var newTerm = {};
                     newTerm.cleanName = matchingTerms[i].cleanName.slice(0);
                     newTerm.name = matchingTerms[i].name;
                     newTerm.value = matchingTerms[i].value;
@@ -173,11 +173,10 @@ function lastWordIsNotSearchTerm(wordArray,searchTerm) {
 
 function wordIsNotSearchTerm(wordArray,searchTerm,index) {
     //covered by qUnit
-    var wordIndex = index;
 
     if (searchTerm) {
         var cleanedSearchTerm = removeTrailingPunctuation(searchTerm);
-        var word = removeTrailingPunctuation(wordArray[wordIndex]);
+        var word = removeTrailingPunctuation(wordArray[index]);
         if(word == cleanedSearchTerm) {
             return false;
         }
@@ -218,7 +217,7 @@ function createTree(matchingTerms, searchTerm, minValue, callback) {
     var errorText = "";
 
     if (searchTerm.indexOf(' ') != -1) {
-        handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms)
+        handleSpacesInMultiWordSearchTerm(searchTerm,matchingTerms);
         searchTerm = searchTerm.replace(/ /g,"_");
     }
 
@@ -267,7 +266,7 @@ function createTerm(matchingTerm,matchingTermIndex,searchTerm,isPost) {
     //covered by qUnit
     //assumes cleaned and lowercase terms
     var newTerm = {};
-    newTerm.name=matchingTerm.name
+    newTerm.name=matchingTerm.name;
     newTerm.cleanName =matchingTerm.cleanName.slice(0);
     var searchTermIndex = matchingTerm.searchTermIndex;
     if(!isPost) {

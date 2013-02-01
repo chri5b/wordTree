@@ -58,7 +58,7 @@ function route(handle, pathname, response, db) {
 	}
 	else
 		{
-			util.log("Invalid request received: " + pathname)
+			util.log("Invalid request received: " + pathname);
 			response.writeHead(404, {"Content-Type": "text/plain"});
 			response.write("404 Not found");
 			response.end();
