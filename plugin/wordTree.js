@@ -29,24 +29,27 @@ function wordTree(testMode) {
 
             if($("#"+ targetElementId + "svg").length == 0){
                 var svgElement = targetElement.append("svg:svg").attr("id",targetElementId + "svg");
-
-                svgElement.append("svg:g").attr("id", targetElementId + "previs");
+				
                 svgElement.append("svg:g").attr("id", targetElementId + "vis");
+                svgElement.append("svg:g").attr("id", targetElementId + "previs");
+
             }
 
             var d3TreeLayout = d3.layout.tree();
 
-            d3TreeLayout.size([my.height(), my.width()/2]);
+            d3TreeLayout.size([my.height(), (my.width()/2) - my.margins()[1]]);
 
             d3.select("#"+ targetElementId + "svg")
                 .attr("width", my.width() - (my.margins()[1] + my.margins()[3])+'px')
                 .attr("height", (my.height() - (my.margins()[0] + my.margins()[2])) + 'px');
-
+				
+            d3.select("#"+ targetElementId + "previs")
+                .attr("transform", "translate("+my.margins()[1]+"," + my.margins()[0] + ")");
+				
             d3.select("#"+ targetElementId + "vis")
                 .attr("transform", "translate(" + (((my.width())/2) + my.margins()[1]) + "," + my.margins()[0] + ")");
 
-            d3.select("#"+ targetElementId + "previs")
-                .attr("transform", "translate("+my.margins()[1]+"," + my.margins()[0] + ")");
+
 
             if(preTreeData && postTreeData) {
                 my.maxSize(Math.max(preTreeData.value,postTreeData.value));
@@ -64,7 +67,7 @@ function wordTree(testMode) {
             var vis = d3.select("#"+ targetElementId + "vis");
             previs.empty();
             vis.empty();
-            d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width()/2 - (my.margins()[1] + my.margins()[3])]);
+            d3TreeLayout.size([my.height() - (my.margins()[0] + my.margins()[2]), my.width() - ((my.margins()[1] + my.margins()[3])/2)]);
             if (preTreeData) {
                 update(preTreeData,"pre",d3.select("#"+ targetElementId + "previs"),d3TreeLayout);
             }
@@ -260,12 +263,18 @@ function wordTree(testMode) {
                 depthWidths[d.depth] = widthForThisNode;
             }
         });
+		
+		var availableSpaceRatio = getAvailableSpaceRatio(depthWidths,getSpaceForTree(searchTermWidth));
 
-        while(availableSpaceRatio > 1) {
+        while(availableSpaceRatio > 1.1 || availableSpaceRatio < 0.9) {
             spaceForTree = getSpaceForTree(searchTermWidth);
-            var availableSpaceRatio = getAvailableSpaceRatio(depthWidths, spaceForTree);
+			
             depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceRatio);
-            searchTermWidth = searchTermWidth/availableSpaceRatio;
+			if(availableSpaceRatio > 1.1) {
+				searchTermWidth = searchTermWidth/availableSpaceRatio;
+			}
+			//recalculate availableSpaceRatio before looping back to the while statement
+			availableSpaceRatio = getAvailableSpaceRatio(depthWidths, getSpaceForTree(searchTermWidth));
         }
 
         // Set the horizontal position for each node. Set vertical position for root node in the middle of the available space.
@@ -303,20 +312,18 @@ function wordTree(testMode) {
 
     function adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceUsed) {
         //We need to try to fit the available content in the space available
-        //Given the maxDepth we need to plot, can we fit it in the available space?
+        //Given the maxDepth we need to plot, does it fit nicely in the available space?
 
-        if(availableSpaceUsed <= 1) {
-            // If we have more space than we need, nothing needs to be done
-        }
-        else if (availableSpaceUsed > 1) {
-            // If we just need to squeeze things up a bit, then do it
-            for (var i = 0 ; i < Math.min(maxDepth,depthWidths.length); i++) {
-                // reduce the available space
-                depthWidths[i] = depthWidths[i]/availableSpaceUsed;
-            }
-            // reduce the textSizeMultiplier so we actually need less space   
-            my.textSizeMultiplier(my.textSizeMultiplier()/availableSpaceUsed);
-        }
+		// If we need to squeese things up or space them out, then do it
+		for (var i = 0 ; i < Math.min(maxDepth,depthWidths.length); i++) {
+			// reduce the available space
+			depthWidths[i] = depthWidths[i]/availableSpaceUsed;
+		}
+		if (availableSpaceUsed > 1) { 
+		// reduce the textSizeMultiplier so we actually need less space, if we're reducing space
+			my.textSizeMultiplier(my.textSizeMultiplier()/availableSpaceUsed);
+			
+		}
 
         return depthWidths;
     }
@@ -588,9 +595,9 @@ function wordTree(testMode) {
 
     function getFontSize(thisSize){
         if(thisSize == my.maxSize()) {
-            return (Math.sqrt(( thisSize/my.maxSize() ) * 800 * my.textSizeMultiplier() ))+8;
+            return (Math.sqrt(( thisSize/my.maxSize() ) * 800 * my.textSizeMultiplier() ))+14;
         } else {
-            return (Math.pow(thisSize * 3 * my.textSizeMultiplier() ,0.8)) + 6;
+            return (Math.pow(thisSize * 3 * my.textSizeMultiplier() ,0.7)) + 14;
         }
     }
 

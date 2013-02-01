@@ -207,7 +207,7 @@ function removeTrailingPunctuation(word) {
     return null;
 }
 
-function createTree(matchingTerms, searchTerm, minValue, callback) {
+function createTree(matchingTerms, searchTerm, maxTerms, callback) {
     //partially covered in qUnit
     var postTree = [];
     var preTree = [];
@@ -225,7 +225,7 @@ function createTree(matchingTerms, searchTerm, minValue, callback) {
 
     postTree = nestTreeData(postTreeData,searchTerm);
 
-    postTree = removeNodesBelowMinValue(postTree,minValue);
+    postTree = pruneToMaxNodes(postTree,maxTerms);
 
     if (postTree == undefined) {
         error=true;
@@ -233,7 +233,7 @@ function createTree(matchingTerms, searchTerm, minValue, callback) {
     }
 
     preTree = nestTreeData(preTreeData,searchTerm);
-    preTree = removeNodesBelowMinValue(preTree,minValue);
+    preTree = pruneToMaxNodes(preTree,maxTerms);
 
     if (preTree == undefined) {
         error=true;
@@ -241,6 +241,36 @@ function createTree(matchingTerms, searchTerm, minValue, callback) {
     }
 
     callback(error,errorText,postTree,preTree,matchingTerms);
+}
+
+function pruneToMaxNodes(tree,maxNodes) {
+		var minValue = 1;
+		tree = removeNodesBelowMinValue(tree,minValue);
+		
+		while(countNodes(tree) > maxNodes)
+		{
+			console.log("count: "+countNodes(tree));
+			minValue ++;
+			tree = removeNodesBelowMinValue(tree,minValue);
+			console.log("minValue:" +minValue);
+		}
+		return tree;
+}
+
+function countNodes(tree) {
+	if(tree) {
+		var counter = 0;
+		if(tree.children.length == 0) {
+			counter ++;
+		} else {
+			for(var i=0; i < tree.children.length ; i++) {
+					counter = counter + countNodes(tree.children[i]);
+			}
+		}
+		return counter;
+	} else {
+		return false;
+	}
 }
 
 function removeNodesBelowMinValue(tree,minValue) {

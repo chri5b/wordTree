@@ -14,7 +14,7 @@ var dickens = require("./dickens");
 var joyce = require("./joyce");
 var treeProcessor = require("./treeProcessor");
 //Config parameters
-var maxKeyWords = 500;
+var maxKeyWords = 10;
 var minValue = 2;
 
 function staticFiles(pathname, response) {
@@ -98,13 +98,15 @@ function keyWordSearch(pathname, response) {
 					response.end();
 				}
 				else {
+					/*
 					if(filteredKeyWords.length > maxKeyWords)
 					{
 						console.log("INFO: pruning filtered keywords from " + filteredKeyWords.length + " to " + maxKeyWords);
 						filteredKeyWords.length = maxKeyWords;
 					}
+					*/
 				}
-                treeProcessor.createTree(filteredKeyWords,searchTerm,minValue,function(error,errorText,postTreeData,preTreeData,d) {
+                treeProcessor.createTree(filteredKeyWords,searchTerm,maxKeyWords,function(error,errorText,postTreeData,preTreeData,d) {
                     if(error) {
                         response.writeHead(500,{"Content-Type": "text/plain"});
                         response.write(errorText);
