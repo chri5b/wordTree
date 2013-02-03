@@ -5,12 +5,18 @@
         <title>Word Tree</title>
         <link type="text/css" rel="stylesheet" href="style.css"/>
         <link type="text/css" rel="stylesheet" href="bootstrap.css"/>
+        <!-- <link type="text/css" rel="stylesheet" href="customOptions.css"/> -->
         <![if (IE 9)|(!IE)]> 
         <script type="text/javascript" src="jQuery-1.8.1.js" ></script>
         <script type="text/javascript" src="d3.js"></script>
         <script type="text/javascript" src="d3.layout.js"></script>
         <script type="text/javascript" src="../plugin/wordTree.js"></script>
         <script type="text/javascript" src="search.js"></script>
+        <script type="text/javascript">
+			
+
+			
+        </script>
          <![endif]>
     </head>
     <body>
@@ -26,14 +32,45 @@
         <![endif]>
 
         <![if (IE 9)|(!IE)]>
-        <div><span>Key word: </span><input class="input" id="search" value="his" />
-        <input class="button btn-info" id="searchButton" type="button" value="go" />
-        <div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
-        </div>
-            <div class="row-fluid">
-				<div class="span6" id="results2"></div>
-                <div class="span6" id="results"></div>
-            </div>
+
+		<div class="row-fluid">
+			<div class="span2">
+			Try some of these words for size:
+			</div>
+			<div class="span2 clickToQuery">
+				said
+			</div>
+			<div class="span2 clickToQuery">
+				returned
+			</div>
+			<div class="span2 clickToQuery">
+				Mr
+			</div>
+			<div class="span2">
+				<span>Or enter something here: </span>
+				<input type="text" class="input" id="search" value="his" />
+				<input class="button btn-info" id="searchButton" type="button" value="go" />
+				<div class="error" id="errorDiv">Nothing matches your search term. Please try something different</div>
+			</div>
+		</div>
+		<div class="row-fluid">
+			<div class="span6">
+				<div class="bookTree">
+					<select id="bookChooser1"></select>
+					<h5 id="author1">Author</h5>
+					<h6 id="book1">Book</h6>
+					<div id="results2"></div>
+				</div>
+			</div>
+			<div class="span6"> 
+				<div class="bookTree">
+					<select id="bookChooser2"></select>
+					<h5 id="author2">Author</h5>
+					<h6 id="book2">Book</h6>
+					<div id="results"></div>
+				</div>
+			</div>
+		</div>
         
         <script type="text/javascript">
             $(document).ready(function() {
@@ -48,12 +85,56 @@
                     updateTree($("#search").val());
                 });
                 
+                
+                
                 var initialSearchTerm = "his";
+                
+                var books = [
+						{
+							"id":0,
+							"author":"James Joyce",
+							"title":"Ulysses",
+							"param":"ulysses"
+						},
+						{
+							"id":1,
+							"author":"Charles Dickens",
+							"title":"David Copperfield",
+							"param":"copperfield"
+						}
+					];
+					
+				var bookChooser1 = $("#bookChooser1");
+				$.each(books, function() {
+					bookChooser1.append($("<option />").val(this.id).text(this.author + " " + this.title));
+				});
+				bookChooser1.change(function() {
+					$("#book1").html(books[bookChooser1.val()].title);
+					$("#author1").html(books[bookChooser1.val()].author);		
+					updateTree($("#search").val());
+				});
+				
+				
+				var bookChooser2 = $("#bookChooser2");
+				$.each(books, function() {
+					bookChooser2.append($("<option />").val(this.id).text(this.author + " " + this.title));
+				});
+				
+				bookChooser2.change(function() {
+					$("#book2").html(books[bookChooser2.val()].title);
+					$("#author2").html(books[bookChooser2.val()].author);
+					updateTree($("#search").val());
+				});
+				
+				$(".clickToQuery").click(function(eventObj) {
+					updateTree(eventObj.srcElement.innerText);
+				});
+
                          
                 //configure the tree visualisation
                 var tree = wordTree()
                     .searchTerm(initialSearchTerm)
-                    .width($(window).width()/2)
+                    .width($(window).width()/12*5)
                     .height($(window).height()-100)
                     .maxResults(50)
                     .margins([10,10,10,10])
@@ -81,7 +162,7 @@
 
                 var tree2 = wordTree()
                     .searchTerm(initialSearchTerm)
-                    .width($(window).width()/2)
+                    .width($(window).width()/12*5)
                     .height($(window).height()-100)
                     .maxResults(50)
                     .margins([10,10,10,10])
@@ -106,6 +187,9 @@
                         }
                         return text;
                     });
+                    
+                bookChooser2.val(1).change();
+				bookChooser1.val(0).change();
                 
                 function updateTree(searchTerm) {
                     //update the search input box with the new searchTerm (in case this is called from the onClick event of one of the nodes
@@ -113,16 +197,16 @@
                     $("#selectedText").empty();
                     
                     //Request the data
-                    var request = getRequest(searchTerm,"copperfield");
-                    var request2 = getRequest(searchTerm,"ulysses");
+                    var request = getRequest(searchTerm,books[bookChooser2.val()].param);
+                    var request2 = getRequest(searchTerm,books[bookChooser1.val()].param);
                     
                     //Update the visualisation settings
                     tree.searchTerm(searchTerm)
-                            .width($(window).width()/2)
+                            .width($(window).width()/12*5)
                             .height($(window).height()-100);
 
                     tree2.searchTerm(searchTerm)
-                            .width($(window).width()/2)
+                            .width($(window).width()/12*5)
                             .height($(window).height()-100);
                     
                     //redraw the tree when the data returns
@@ -173,13 +257,13 @@
                 $(window).resize(function() {
                     //If we resize the window, redraw the tree without requesting new data.
                     tree
-                        .width($(window).width()/2)
+                        .width($(window).width()/12*5)
                         .height($(window).height()-100);
                     d3.select("#results")
                         .call(tree);
 
                     tree2
-                        .width($(window).width()/2)
+                        .width($(window).width()/12*5)
                         .height($(window).height()-100);
                     d3.select("#results2")
                         .call(tree2);

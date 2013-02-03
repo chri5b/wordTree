@@ -11,6 +11,10 @@ body {
   stroke-width: 1.5px;
 }
 
+.node text {
+	fill: #C4C4C4;
+}
+
 line.link, path.link{
   fill: none;
   stroke: #ccc;
@@ -65,3 +69,11 @@ line.highlight, path.highlight{
 	text-opacity:1;
 }
 
+.bookTree {
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+	border-width:1px;
+	border-color:#343434;
+	padding:10px;
+}

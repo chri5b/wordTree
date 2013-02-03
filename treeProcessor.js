@@ -249,10 +249,9 @@ function pruneToMaxNodes(tree,maxNodes) {
 		
 		while(countNodes(tree) > maxNodes)
 		{
-			console.log("count: "+countNodes(tree));
 			minValue ++;
 			tree = removeNodesBelowMinValue(tree,minValue);
-			console.log("minValue:" +minValue);
+			
 		}
 		return tree;
 }
