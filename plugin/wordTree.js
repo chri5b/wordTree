@@ -6,13 +6,13 @@ function wordTree(testMode) {
         maxSize =0,
         preTreeData = [],
         postTreeData = [],
+        matchingTerms = [],
         nameAccessor = function(d) { return d.name; },
         valueAccessor = function(d) { return d.value; },
         onClick = function() {},
-        onDragEnd = function(d) { console.log(d.name + " selected"); },
         maxResults = 40,
         maxDepth = 20,
-        mouseoverText = function(d) { return d.name; },
+        mouseoverText = function(d) { return d.cleanName; },
         useButtonNav = false,
         onButtonClick = function() {},
         buttonText = function() { return ["Go"]; };
@@ -149,6 +149,12 @@ function wordTree(testMode) {
         return my;
     };
 
+    my.matchingTerms = function(value) {
+        if (!arguments.length) return matchingTerms;
+        matchingTerms = value;
+        return my;
+    };
+
     my.nameAccessor = function(value) {
         if (!arguments.length) return nameAccessor;
         nameAccessor = value;
@@ -164,12 +170,6 @@ function wordTree(testMode) {
     my.onClick = function(value) {
         if (!arguments.length) return onClick;
         onClick = value;
-        return my;
-    };
-
-    my.onDragEnd = function(value) {
-        if (!arguments.length) return onDragEnd;
-        onDragEnd = value;
         return my;
     };
 
@@ -229,11 +229,9 @@ function wordTree(testMode) {
         var d3NodeData = visualisation.selectAll("g.node,g.buttonnode")
             .data(treeData, function(d) { return d.id || (d.id = ++nodeIDCounter); });
 
-        var dragBehaviour = defineDragBehaviour(preOrPost);
-
         drawRootLink(searchTermWidth,my.height()/2);
 
-        drawNodes(d3NodeData,preOrPost,dragBehaviour,source,duration);
+        drawNodes(d3NodeData,preOrPost,source,duration);
 
         // Use d3 to bind all the svg path elements which have the 'link' class to the tree link data
         var d3LinkData = visualisation.selectAll("path.link,path.buttonlink")
@@ -328,59 +326,6 @@ function wordTree(testMode) {
         return depthWidths;
     }
 
-    function defineDragBehaviour(preOrPost) {
-        //What happens when you drag depends on what tree you're dragging on, so this sets up the drag behaviour accordingly
-        var drag = d3.behavior.drag()
-            .origin(Object);
-        if(preOrPost == "pre") {
-            drag
-                .on("drag", dragmovePre)
-                .on("dragend", dragendPre);
-        } else {
-            drag
-                .on("drag", dragmovePost)
-                .on("dragend", dragendPost);
-        }
-        return drag;
-    }
-
-    function dragmovePre(d) {
-        dragmove(d,"pre");
-    }
-
-    function dragmovePost(d) {
-        dragmove(d,"post");
-    }
-
-    function dragmove(d,preOrPost) {
-        userDragging = true;
-        var verticalDistance = d.y - d3.event.y;
-        var dragLimit = 200;
-        var limitedVerticalDistance = Math.max(0,Math.min(-verticalDistance,dragLimit));
-        var leafArray = [];
-        leafArray = getLeafArray(d,leafArray,true,preOrPost);
-
-        d3.select("#dragSlider")
-            .attr("transform","translate(-2," + limitedVerticalDistance + ")");
-
-        var spacePerSibling = dragLimit/leafArray.length;
-        //Highlight the immediate children
-        var rootNode = getRoot(d);
-        var otherTreeData = getTreeData(getOther(preOrPost));
-        if(otherTreeData) {
-            var otherTreeRoot = getRoot(otherTreeData);
-            removeHighlight(otherTreeRoot,getOther(preOrPost));
-        }
-        removeHighlight(rootNode,preOrPost);
-
-        for (var i = 0; i < leafArray.length ; i++) {
-            var thisNode = getNodeFromBothTrees(leafArray[i].id);
-            if((limitedVerticalDistance > (i * spacePerSibling)) && (limitedVerticalDistance < (i + 1) * spacePerSibling)) {
-                highlightBothTrees(thisNode);
-            }
-        }
-    }
-
     function highlightBothTrees(thisNode) {
         var expressionID = thisNode.matchingTermIndex;
         highlightTree("pre",expressionID);
@@ -471,28 +416,6 @@ function wordTree(testMode) {
         }
 
         return leafArray;
-    }
-
-    function dragendPre(d) {
-        dragend(d,"pre");
-    }
-
-    function dragendPost(d) {
-        dragend(d,"post");
-    }
-
-    function dragend(d,preOrPost) {
-        userDragging = false;
-        hideDragAffordance();
-        var result = {};
-        var root = getRoot(d);
-        var otherTreeData = getTreeData(getOther(preOrPost));
-        var otherTreeRoot = getRoot(otherTreeData);
-        result = getHighlightedLeaf(root,otherTreeRoot);
-        removeHighlight(root,preOrPost);
-        removeHighlight(otherTreeRoot,getOther(preOrPost));
-        var dragEndFunction = my.onDragEnd();
-        dragEndFunction(result);
     }
 
     function getHighlightedLeaf(root,otherTreeRoot) {
@@ -657,8 +580,8 @@ function wordTree(testMode) {
         return spaceForTree;
     }
 
-    function drawNodes(d3NodeData,preOrPost,dragBehaviour,source,duration) {
-        addNewNodes(d3NodeData,preOrPost,dragBehaviour,source);
+    function drawNodes(d3NodeData,preOrPost,source,duration) {
+        addNewNodes(d3NodeData,preOrPost,source);
         transitionExistingNodes(d3NodeData);
         removeOldNodes(d3NodeData,duration,source);
     }
@@ -691,7 +614,7 @@ function wordTree(testMode) {
 
     }
 
-    function addNewNodes(nodes,preOrPost,dragBehaviour,source) {
+    function addNewNodes(nodes,preOrPost,source) {
 
         //Add an svg group with the interactive behaviour and the appropriate position
         var onClickBehaviour = my.onClick();
@@ -709,11 +632,10 @@ function wordTree(testMode) {
         //Add the circle
         nodeEnter.append("svg:circle")
             .attr("r", 1e-6)
-            .call(dragBehaviour)
             .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
             .style("opacity", function(d) { return d.isButton ? 0 : 1; }); //hide the circle for buttons
 
-        //Add the text at the appropriate position, size and drag behaviour. id is used to find and highlight the node during drag
+        //Add the text at the appropriate position, size.
         nodeEnter.append("svg:rect")
             .attr("height",function(d) { return getFontSize(d.value) + 4 })
             .attr("width",function(d) {return getTextWidth(getNodeText(d,preOrPost),d.value) * 0.9})
@@ -734,7 +656,6 @@ function wordTree(testMode) {
             .attr("opacity",function(d) { return d.isButton ? 0.15 : Math.sqrt(d.value/my.maxSize())>0.25 ? 1 : 0.5 })
             .attr("id", function(d) { return preOrPost == "pre" ? preOrPost + "-" + d.id : (d.depth == 0 ? "rootnode" : "post-" + d.id); })
             .text(function(d) { return getNodeText(d,preOrPost);})
-            .call(dragBehaviour)
             .style("fill-opacity", 1e-6)
             .append("svg:title")
             .text(mouseoverText);
@@ -874,8 +795,6 @@ function wordTree(testMode) {
         return childButtonIds;
     }
 
-    var userDragging = false;
-
     var nodeIDCounter = 0;
 
     var diagonal = d3.svg.diagonal()
@@ -897,63 +816,5 @@ function wordTree(testMode) {
             handleSpacesInMultiWordSearchTerm:handleSpacesInMultiWordSearchTerm,
             createTree:createTree
         }
-    }
-}
-
-function hideDragAffordance() {
-    if(!userDragging) {
-        d3.select("#dragAffordance").remove();
-    }
-}
-
-function showDragAffordance(id, x, y, preOrPost) {
-    //partially covered by qUnit
-    if(!userDragging) {
-
-        var dragAffordanceGroup;
-        var thisX, thisY;
-
-        dragAffordanceGroup = d3.select("#svg").append("svg:g");
-
-        $("#svg").mousemove(function(e) {
-            thisX = e.pageX - this.offsetLeft;
-            thisY = e.pageY - this.offsetTop;
-            if(!userDragging) {
-                dragAffordanceGroup
-                    .attr("id","dragAffordance")
-                    .attr("transform","translate("+ (thisX-15) +","+ (thisY-10) + ")")
-            }
-        });
-
-        $("#"+preOrPost+"-"+id).attr("style","cursor:move;");
-
-        var sliderTrack = dragAffordanceGroup.append("svg:rect")
-            .attr("id","sliderTrack")
-            .attr("width",6)
-            .attr("rx",3)
-            .attr("ry",3)
-            .attr("fill","#ccc")
-            .attr("stroke","#aaa")
-            .attr("height",200)
-            .attr("opacity",0.1)
-            .transition()
-            .delay(200)
-            .duration(500)
-            .attr("opacity",0.5);
-
-
-        var slider = dragAffordanceGroup.append("svg:rect")
-            .attr("transform","translate(-2,0)")
-            .attr("id","dragSlider")
-            .attr("width",10)
-            .attr("height",10)
-            .attr("rx",3)
-            .attr("ry",3)
-            .attr("fill","#dadada")
-            .attr("stroke","#999")
-            .attr("opacity",0.1).transition()
-            .delay(200)
-            .duration(500)
-            .attr("opacity",1);
     }
 }

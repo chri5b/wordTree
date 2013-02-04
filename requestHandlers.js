@@ -12,6 +12,9 @@ var dateFormat = require("dateformat");
 var keyWords = require("./keyWords");
 var dickens = require("./dickens");
 var joyce = require("./joyce");
+var tolstoy = require("./tolstoy");
+var austen = require("./austen");
+var kipling = require("./kipling");
 var treeProcessor = require("./treeProcessor");
 //Config parameters
 var maxKeyWords = 10;
@@ -77,6 +80,15 @@ function keyWordSearch(pathname, response) {
             case "copperfield":
             case "":
                 rawKeyWords = dickens.copperfield();
+                break;
+            case "warAndPeace":
+                rawKeyWords = tolstoy.warAndPeace();
+                break;
+            case "jungle":
+                rawKeyWords = kipling.jungle();
+                break;
+            case "pride":
+                rawKeyWords = austen.pride();;
                 break;
             default:
                 response.writeHead(500,{"Content-Type": "text/plain"});
