@@ -4,9 +4,9 @@ var util = require("util");
 function route(handle, pathname, response, db) {
 	util.log("About to route a request for " + pathname);
 	
-	if (pathname.indexOf('/keyWord?') !=-1)
+	if (pathname.indexOf('/api/fingerPrintSearch?') !=-1)
 		{
-			handle['/keyWord'](pathname, response);
+			handle['/fingerPrintSearch'](pathname, response);
 		}
 	else if (pathname.indexOf('/client/') !=-1)
 		{
