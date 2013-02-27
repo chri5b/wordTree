@@ -61,84 +61,71 @@ function staticFiles(pathname, response) {
 		
 }
 
-function keyWordSearch(pathname, response) {
+function fingerPrintSearch(pathname, response) {
     util.log("Request handler 'keyWordSearch' was called");
     var thisUrl = url.parse(pathname,true);
     var thisQuery = thisUrl.query;
     var thisSearch = thisQuery.q;
     var thisBook = thisQuery.book;
-    var thisUsername = thisQuery.username;
-    var thisPassword = thisQuery.password;
-    var thisReferrer = thisQuery.referrer;
 
     var rawKeyWords;
     if(thisBook) {
         switch (thisBook) {
-            case "ulysses":
-                rawKeyWords = joyce.ulysses();
-                break;
-            case "copperfield":
-            case "":
-                rawKeyWords = dickens.copperfield();
-                break;
-            case "warAndPeace":
-                rawKeyWords = tolstoy.warAndPeace();
-                break;
-            case "jungle":
-                rawKeyWords = kipling.jungle();
-                break;
-            case "pride":
-                rawKeyWords = austen.pride();;
-                break;
-            default:
-                response.writeHead(500,{"Content-Type": "text/plain"});
-                response.write("invalid book parameter");
-                response.end();
-                break;
-        }
-    } else {
-        rawKeyWords = joyce.ulysses();
-    }
-        var myKeyWords = [];
-        //very ugly but necessary because otherwise each filter resulted in the list of keywords being whittled down.
-		copyKeyWords(rawKeyWords,myKeyWords,thisSearch, function(copiedKeyWords,searchTerm) {
-			filterKeyWords(copiedKeyWords,searchTerm, function(filteredKeyWords) {
-				if(filteredKeyWords.length == 0) {
-					console.log("ERROR: search returned no results: ",thisSearch);
-					response.writeHead(404, {"Content-Type": "text/plain"});
-					response.write("no results for "+ thisSearch);
-					response.end();
-				}
-				else {
-					/*
-					if(filteredKeyWords.length > maxKeyWords)
-					{
-						console.log("INFO: pruning filtered keywords from " + filteredKeyWords.length + " to " + maxKeyWords);
-						filteredKeyWords.length = maxKeyWords;
-					}
-					*/
-				}
-                treeProcessor.createTree(filteredKeyWords,searchTerm,maxKeyWords,function(error,errorText,postTreeData,preTreeData,d) {
-                    if(error) {
-                        response.writeHead(500,{"Content-Type": "text/plain"});
-                        response.write(errorText);
-                        response.end();
-                    } else
-                    {
-                        var responseData = {};
-                        responseData.matchingTerms = extractName(d);
-                        responseData.preTree = preTreeData;
-                        responseData.postTree = postTreeData;
-                        response.writeHead(200, {"Content-Type": "text/plain"});
-                        response.write(JSON.stringify(responseData,null,2));
-                        response.end();
-                    }
-                });
-			});
+            	case "ulysses":
+                	rawKeyWords = joyce.ulysses();
+                	break;
+            	case "copperfield":
+           	case "":
+                	rawKeyWords = dickens.copperfield();
+                	break;
+            	case "warAndPeace":
+                	rawKeyWords = tolstoy.warAndPeace();
+                	break;
+            	case "jungle":
+                	rawKeyWords = kipling.jungle();
+                	break;
+            	case "pride":
+               	 	rawKeyWords = austen.pride();;
+                	break;
+            	default:
+                	response.writeHead(500,{"Content-Type": "text/plain"});
+                	response.write("invalid book parameter");
+         	       	response.end();
+                	break;
+        	}
+    	} else {
+        	rawKeyWords = joyce.ulysses();
+    	}
+    	var myKeyWords = [];
+    	//very ugly but necessary because otherwise each filter resulted in the list of keywords being whittled down.
+	copyFingerPrintKeyWords(rawKeyWords,myKeyWords,thisSearch, function(copiedKeyWords,searchTerm) {
+		filterKeyWords(copiedKeyWords,searchTerm, function(filteredKeyWords) {
+			if(filteredKeyWords.length == 0) {
+				console.log("ERROR: search returned no results: ",thisSearch);
+				response.writeHead(404, {"Content-Type": "text/plain"});
+				response.write("no results for "+ thisSearch);
+				response.end();
+			}
+               		treeProcessor.createTree(filteredKeyWords,searchTerm,maxKeyWords,function(error,errorText,postTreeData,preTreeData,d) {
+      			     	if(error) {
+               		        	response.writeHead(500,{"Content-Type": "text/plain"});
+               		      	  	response.write(errorText);
+               		        	response.end();
+      			     	} else {
+              				var responseData = {};
+                		        responseData.matchingTerms = extractName(d);
+          		      		responseData.preTree = preTreeData;
+     		              		responseData.postTree = postTreeData;
+     		              		response.writeHead(200, {"Content-Type": "text/plain"});
+     		              		response.write(JSON.stringify(responseData,null,2));
+     		              		response.end();
+                    		}
+                	});
 		});
-    }
+	});
+}
 
-function copyKeyWords(chapters,myKeyWords,searchTerm,callback) {
+function copyFingerPrintKeyWords(chapters,myKeyWords,searchTerm,callback) {
             var paraCounter = 0;
 	        for(var i=0;i<chapters.length;i++) {
                 for(var j=0;j<chapters[i].paragraphs.length; j++) {
@@ -183,4 +170,4 @@ function extractName(d) {
 }
 
 exports.staticFiles = staticFiles;
-exports.keyWordSearch = keyWordSearch;
+exports.fingerPrintSearch = fingerPrintSearch;

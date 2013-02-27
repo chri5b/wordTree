@@ -2,7 +2,7 @@
 
 function getRequest(initialSearchTerm,book) {
     return $.ajax({
-          url: "/keyWord?",
+          url: "/api/fingerPrintSearch?",
           type: "GET",
           data: {
               "q":initialSearchTerm,
