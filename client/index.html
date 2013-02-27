@@ -44,7 +44,14 @@
                 </p>
                 <p>
                     Only the top 20 contexts are shown, and only if they occur more than twice.
-                </p></div>
+                </p>
+                <p>
+                    Content for the books courtesy of <a href="http://www.gutenberg.org">Project Gutenberg</a>
+                </p>
+                <p>
+
+                </p>
+            </div>
         </div>
 
         <div class="row-fluid">
@@ -64,12 +71,16 @@
 		<div class="row-fluid">
 			<div class="span6">
 				<div class="bookTree">
+                    <div id="title2"></div>
 					<div id="results2"></div>
+                    <div id="link2"></div>
 				</div>
 			</div>
 			<div class="span6"> 
 				<div class="bookTree">
+                    <div id="title"></div>
 					<div id="results"></div>
+                    <div id="link"></div>
 				</div>
 			</div>
 		</div>
@@ -96,33 +107,40 @@
 							"id":0,
 							"author":"James Joyce",
 							"title":"Ulysses",
-							"param":"ulysses"
+							"param":"ulysses",
+                            "link":"Ulysses.txt"
 						},
 						{
 							"id":1,
 							"author":"Charles Dickens",
 							"title":"David Copperfield",
-							"param":"copperfield"
+							"param":"copperfield",
+                            "link":"DavidCopperfield.txt"
 						},
                         {
                             "id":2,
                             "author":"Jane Austen",
                             "title":"Pride and Prejudice",
-                            "param":"pride"
+                            "param":"pride",
+                            "link":"PrideAndPrejudice.txt"
                         },
                         {
                             "id":3,
                             "author":"Rudyard Kipling",
                             "title":"The Jungle Book",
-                            "param":"jungle"
+                            "param":"jungle",
+                            "link":"TheJungleBook.txt"
                         },
                         {
                             "id":4,
                             "author":"Leo Tolstoy",
                             "title":"War and Peace",
-                            "param":"warAndPeace"
+                            "param":"warAndPeace",
+                            "link":"WarAndPeace.txt"
                         }
 					];
+
+                var licenseBlurb = "This eBook is for the use of anyone anywhere at no cost and with almost no restrictions whatsoever. You may copy it, give it away or re-use it under the terms of the Project Gutenberg License included with this eBook or online at www.gutenberg.org";
 					
 				var bookChooser1 = $("#bookChooser1");
 				$.each(books, function() {
@@ -130,17 +148,22 @@
 				});
 				bookChooser1.change(function() {
 					updateTree($("#search").val(),"tree1");
+                    $("#title2").html("<h3>" + books[bookChooser1[0].selectedIndex].title + "</h3>");
+                    $("#link2").html("<a href='" + books[bookChooser1[0].selectedIndex].link  + "' title='" + licenseBlurb + "'>download the full text of the book</a>");
 				});
 				
 				
 				var bookChooser2 = $("#bookChooser2");
 				$.each(books, function() {
 					bookChooser2.append($("<option />").val(this.id).text(this.author + " - " + this.title));
-				});
+
+                });
 				
 				bookChooser2.change(function() {
 					updateTree($("#search").val(),"tree2");
-				});
+                    $("#title").html("<h3>" + books[bookChooser2[0].selectedIndex].title + "</h3>");
+                    $("#link").html("<a href='" + books[bookChooser2[0].selectedIndex].link + "' title='" + licenseBlurb + "'>download the full text of the book</a>");
+                });
 				
 				$(".clickToQuery").click(function(eventObj) {
 					updateTree(eventObj.srcElement.innerText);
@@ -151,7 +174,7 @@
                 var tree = wordTree()
                     .searchTerm(initialSearchTerm)
                     .width($(window).width()/12*6)
-                    .height($(window).height()-200)
+                    .height($(window).height()-250)
                     .maxResults(50)
                     .margins([10,10,10,10])
                     .onClick(function(d) { 
@@ -168,7 +191,7 @@
                 var tree2 = wordTree()
                     .searchTerm(initialSearchTerm)
                     .width($(window).width()/12*6)
-                    .height($(window).height()-200)
+                    .height($(window).height()-250)
                     .maxResults(50)
                     .margins([10,10,10,10])
                     .onClick(function(d) {
@@ -202,11 +225,11 @@
                     //Update the visualisation settings
                         tree.searchTerm(searchTerm)
                                 .width($(window).width()/12*6)
-                                .height($(window).height()-200);
+                                .height($(window).height()-250);
 
                         tree2.searchTerm(searchTerm)
                                 .width($(window).width()/12*6)
-                                .height($(window).height()-200);
+                                .height($(window).height()-250);
 
                     //redraw the tree when the data returns
                     if(!treeToChange || treeToChange == "tree2") {
