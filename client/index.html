@@ -35,23 +35,23 @@
             <div class="span2"></div><button type="button" class="btn btn-info" data-toggle="collapse" data-target="#collapser">More Info</button></h1></div>
         </div>
         <div class="row-fluid collapse" id="collapser">
-            <div class="span6 offset1" >
+            <div class="span6 offset1 well" >
                 <p>
-                    This app takes a word which you enter in the input box below and finds all the uses of that word in two different books.
+                    Can you tell two books apart by comparing the word trees which they generate? 
                 </p>
                 <p>
-                    It then creates a word tree for the top 20 or so words which are found in the immediate context of the chosen word. Words which occur less than 2 times aren't shown, and only the top 20 or so are shown.
+		    This page allows you to compare the contexts that a word is used in across two books. Clicking on a word will re-query for that word, and you can select different books using the drop-downs.
                 </p>
                 <p>
-                    Feel free to mouse-over a word to see the context, click on a word to make a query against all uses of that word, or to change the books to query.
+                    Only the top 20 contexts are shown, and only if they occur more than twice.
                 </p></div>
         </div>
 
         <div class="row-fluid">
 			<div class="span10 offset1">
                 <form class="form-inline">
-                    <span>Search for uses of </span>
-                    <input type="text" class="input-small" id="search" value="light" />
+                    <span>Search for uses of the word </span>
+                    <input type="text" class="input-small" id="search" value="green" />
                     <span>in </span>
                     <select id="bookChooser1" class="input-xlarge"></select>
                     <span>and </span>
@@ -89,7 +89,7 @@
                     updateTree($("#search").val());
                 });
 
-                var initialSearchTerm = "light";
+                var initialSearchTerm = "green";
                 
                 var books = [
 						{
