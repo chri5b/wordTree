@@ -4,6 +4,6 @@ var requestHandlers = require("./requestHandlers");;
 
 var handle = {};
 handle[""] = requestHandlers.staticFiles;
-handle["/keyWord"] = requestHandlers.keyWordSearch;
+handle["/fingerPrintSearch"] = requestHandlers.fingerPrintSearch;
 
 server.start(router.route, handle);

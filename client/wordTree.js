@@ -218,9 +218,8 @@ function wordTree(testMode) {
 
         // Compute the new tree layout.
         var nodes = d3TreeLayout.nodes(source).reverse();
-        var rootNode = getRoot(nodes[0]);
-        rootNode.value = my.maxSize(); //If the preTree has more data than the postTree, make sure the middle word is big enough.
-        searchTermWidth = getTextWidth(rootNode.cleanName,rootNode.value); //How many pixels does the word searched for (in the middle of the tree) take up?
+
+        var searchTermWidth = getSearchTermWidth(nodes);
 
 
         var treeData = prepareTreeData(nodes,source,preOrPost,searchTermWidth);
@@ -246,6 +245,12 @@ function wordTree(testMode) {
         });
     }
 
+    function getSearchTermWidth(nodes) {
+        var rootNode = getRoot(nodes[0]);
+        rootNode.value = my.maxSize(); //If the preTree has more data than the postTree, make sure the middle word is big enough.
+        return getTextWidth(rootNode.cleanName,rootNode.value); //How many pixels does the word searched for (in the middle of the tree) take up?
+    }
+
     function prepareTreeData(nodes,source,preOrPost,searchTermWidth) {
 
         // Calculate width required for each level of depth in the graph
@@ -261,16 +266,16 @@ function wordTree(testMode) {
                 depthWidths[d.depth] = widthForThisNode;
             }
         });
-		
+
 		var availableSpaceRatio = getAvailableSpaceRatio(depthWidths,getSpaceForTree(searchTermWidth));
 
         while(availableSpaceRatio > 1.1 || availableSpaceRatio < 0.9) {
+            searchTermWidth = getSearchTermWidth(nodes);
+
             spaceForTree = getSpaceForTree(searchTermWidth);
 			
             depthWidths = adjustDepthsForAvailableSpace(depthWidths, spaceForTree, availableSpaceRatio);
-			if(availableSpaceRatio > 1.1) {
-				searchTermWidth = searchTermWidth/availableSpaceRatio;
-			}
+
 			//recalculate availableSpaceRatio before looping back to the while statement
 			availableSpaceRatio = getAvailableSpaceRatio(depthWidths, getSpaceForTree(searchTermWidth));
         }
@@ -301,7 +306,7 @@ function wordTree(testMode) {
         //Over 1 means we don't have enough space
         var maxDepth = my.maxDepth();
         var requiredSpace = 0;
-        for (var i = 0; i < Math.min(maxDepth,depthWidths.length); i++) {
+        for (var i = 0; i < Math.min(maxDepth + 1,depthWidths.length); i++) {
             requiredSpace += depthWidths[i];
         }
         var availableSpaceUsed = requiredSpace/spaceForTree;
@@ -312,15 +317,14 @@ function wordTree(testMode) {
         //We need to try to fit the available content in the space available
         //Given the maxDepth we need to plot, does it fit nicely in the available space?
 
-		// If we need to squeese things up or space them out, then do it
-		for (var i = 0 ; i < Math.min(maxDepth,depthWidths.length); i++) {
+		// If we need to squeeze things up or space them out, then do it
+		for (var i = 0 ; i < Math.min(maxDepth + 1,depthWidths.length); i++) {
 			// reduce the available space
-			depthWidths[i] = depthWidths[i]/availableSpaceUsed;
+			depthWidths[i] = depthWidths[i]/(availableSpaceUsed);
 		}
-		if (availableSpaceUsed > 1) { 
+		if (availableSpaceUsed > 1) {
 		// reduce the textSizeMultiplier so we actually need less space, if we're reducing space
-			my.textSizeMultiplier(my.textSizeMultiplier()/availableSpaceUsed);
-			
+			my.textSizeMultiplier(my.textSizeMultiplier()/(availableSpaceUsed));
 		}
 
         return depthWidths;
@@ -566,10 +570,10 @@ function wordTree(testMode) {
         }
 
         if(preOrPost == "pre") {
-            return my.width()/2 - yPosition - searchTermWidth;
+            return my.width()/2 - yPosition - (searchTermWidth);
         }
         else {
-            return yPosition;
+            return yPosition + (searchTermWidth);
         }
     }
 
